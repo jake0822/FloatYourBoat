@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FloatYourBoat — My Listings</title>
+  <link rel="stylesheet" href="css/styles.css" />
+</head>
+<body>
+  <!-- Navbar -->
+  <header class="navbar" id="navbar"></header>
+
+  <!-- Notification Area -->
+  <div id="notification-area" style="position:sticky; top:64px; z-index:99; padding:0 2rem;"></div>
+
+  <!-- Main Content -->
+  <main class="main-content">
+
+    <!-- Header Row -->
+    <div class="section-header">
+      <h2>⚓ My Listings</h2>
+      <button class="btn btn-success" onclick="openCreateForm()">+ New Listing</button>
+    </div>
+
+    <!-- My Listings Table -->
+    <div style="overflow-x:auto; margin-bottom:2rem;">
+      <table class="seller-table">
+        <thead>
+          <tr>
+            <th>Title</th>
+            <th>Type</th>
+            <th>Price</th>
+            <th>Status</th>
+            <th>Saves</th>
+            <th>Posted</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="listings-tbody">
+          <!-- Populated by JS -->
+        </tbody>
+      </table>
+    </div>
+
+    <div id="empty-listings" class="empty-state hidden">
+      <div class="empty-icon">🚤</div>
+      <h3>No listings yet</h3>
+      <p>Click "New Listing" above to post your first boat for sale.</p>
+    </div>
+
+    <!-- Create / Edit Form (hidden by default) -->
+    <section id="listing-form-section" class="card hidden" style="padding:2rem; margin-top:1rem;">
+      <div class="section-header" style="margin-bottom:1.5rem;">
+        <h2 id="form-title-label">New Listing</h2>
+        <button class="btn btn-outline btn-sm" onclick="closeForm()">✕ Cancel</button>
+      </div>
+
+      <form id="listing-form" onsubmit="handleFormSubmit(event)">
+        <!-- Hidden fields -->
+        <input type="hidden" id="form-seller-id" />
+        <input type="hidden" id="form-seller-name" />
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="form-title">Listing Title *</label>
+            <input type="text" id="form-title" placeholder="e.g. 2020 Sea Ray 190 SPX" required />
+          </div>
+          <div class="form-group">
+            <label for="form-type">Boat Type *</label>
+            <select id="form-type" required>
+              <option value="">Select type…</option>
+              <option value="Runabout">Runabout</option>
+              <option value="Center Console">Center Console</option>
+              <option value="Pontoon">Pontoon</option>
+              <option value="Express Cruiser">Express Cruiser</option>
+              <option value="Wake Boat">Wake Boat</option>
+              <option value="Bay Boat">Bay Boat</option>
+              <option value="Kayak">Kayak</option>
+              <option value="Sailboat">Sailboat</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="form-year">Year *</label>
+            <input type="number" id="form-year" placeholder="2020" min="1900" required />
+          </div>
+          <div class="form-group">
+            <label for="form-length">Length (ft) *</label>
+            <input type="number" id="form-length" placeholder="21" min="1" step="0.5" required />
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="form-price">Asking Price ($) *</label>
+            <input type="number" id="form-price" placeholder="35000" min="0" required />
+          </div>
+          <div class="form-group">
+            <label for="form-condition">Condition *</label>
+            <select id="form-condition" required>
+              <option value="">Select…</option>
+              <option value="Like New">Like New</option>
+              <option value="Excellent">Excellent</option>
+              <option value="Good">Good</option>
+              <option value="Fair">Fair</option>
+              <option value="Parts Only">Parts Only</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="form-engine">Engine</label>
+            <input type="text" id="form-engine" placeholder="e.g. Mercury 115 Four-Stroke" />
+          </div>
+          <div class="form-group">
+            <label for="form-hours">Engine Hours</label>
+            <input type="number" id="form-hours" placeholder="Leave blank if N/A" min="0" />
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="form-location">Location *</label>
+            <input type="text" id="form-location" placeholder="City, State" required />
+          </div>
+          <div class="form-group">
+            <label for="form-image-emoji">Emoji Icon</label>
+            <input type="text" id="form-image-emoji" placeholder="🚤" maxlength="4" />
+            <p class="form-hint">Single emoji used as the listing thumbnail.</p>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="form-description">Description *</label>
+          <textarea id="form-description" rows="6" placeholder="Describe the boat, its features, history, and what's included…" required></textarea>
+        </div>
+
+        <div class="flex flex-gap">
+          <button type="submit" class="btn btn-success btn-lg">💾 Save Listing</button>
+          <button type="button" class="btn btn-outline" onclick="closeForm()">Cancel</button>
+        </div>
+      </form>
+    </section>
+  </main>
+
+  <footer>
+    <p>© 2026 FloatYourBoat &mdash; FSU Database Class Project &nbsp;|&nbsp; <a href="browse.html">Browse</a></p>
+  </footer>
+
+  <script src="js/data.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/seller.js"></script>
+</body>
+</html>

@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FloatYourBoat — Browse Listings</title>
+  <link rel="stylesheet" href="css/styles.css" />
+</head>
+<body>
+  <!-- Navbar -->
+  <header class="navbar" id="navbar"></header>
+
+  <!-- Notification Area -->
+  <div id="notification-area" style="position:sticky; top:64px; z-index:99; padding:0 2rem;"></div>
+
+  <!-- Hero -->
+  <div class="hero">
+    <h1>🚤 Find Your Next Boat</h1>
+    <p>Browse hundreds of listings from sellers across Florida</p>
+  </div>
+
+  <!-- Main Content -->
+  <main class="main-content">
+
+    <!-- Filter Bar -->
+    <div class="filter-bar">
+      <div class="form-group">
+        <label for="search">Search</label>
+        <input type="text" id="search" placeholder="Boat name, location, type…" oninput="applyFilters()" />
+      </div>
+
+      <div class="form-group">
+        <label for="type">Type</label>
+        <select id="type" onchange="applyFilters()">
+          <option value="">All Types</option>
+          <option value="Runabout">Runabout</option>
+          <option value="Center Console">Center Console</option>
+          <option value="Pontoon">Pontoon</option>
+          <option value="Express Cruiser">Express Cruiser</option>
+          <option value="Wake Boat">Wake Boat</option>
+          <option value="Bay Boat">Bay Boat</option>
+          <option value="Kayak">Kayak</option>
+          <option value="Sailboat">Sailboat</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label for="min-price">Min Price ($)</label>
+        <input type="number" id="min-price" placeholder="0" min="0" onchange="applyFilters()" />
+      </div>
+
+      <div class="form-group">
+        <label for="max-price">Max Price ($)</label>
+        <input type="number" id="max-price" placeholder="No limit" min="0" onchange="applyFilters()" />
+      </div>
+
+      <div class="form-group">
+        <label for="sort">Sort By</label>
+        <select id="sort" onchange="applyFilters()">
+          <option value="newest">Newest First</option>
+          <option value="oldest">Oldest First</option>
+          <option value="price-asc">Price: Low to High</option>
+          <option value="price-desc">Price: High to Low</option>
+          <option value="popularity">Most Popular</option>
+          <option value="proximity">Nearest to Me</option>
+        </select>
+      </div>
+
+      <div class="form-group" style="min-width:auto;">
+        <label style="display:flex; align-items:center; gap:0.4rem; cursor:pointer;">
+          <input type="checkbox" id="show-sold" onchange="applyFilters()" />
+          Show Sold
+        </label>
+      </div>
+
+      <button class="btn btn-outline btn-sm" onclick="clearFilters()">Clear</button>
+    </div>
+
+    <!-- Result Count & Header -->
+    <div class="section-header">
+      <h2>Listings</h2>
+      <span id="result-count" style="color:var(--mid-gray); font-size:0.9rem;"></span>
+    </div>
+
+    <!-- Listings Grid -->
+    <div class="listings-grid" id="listings-container">
+      <p style="color:var(--mid-gray);">Loading listings…</p>
+    </div>
+  </main>
+
+  <footer>
+    <p>© 2026 FloatYourBoat &mdash; FSU Database Class Project &nbsp;|&nbsp; <a href="index.html">Login</a></p>
+  </footer>
+
+  <script src="js/data.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/browse.js"></script>
+</body>
+</html>

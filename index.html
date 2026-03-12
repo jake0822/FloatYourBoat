@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FloatYourBoat — Login</title>
+  <link rel="stylesheet" href="css/styles.css" />
+</head>
+<body>
+  <div class="auth-container">
+    <div class="auth-box">
+      <!-- Logo -->
+      <div class="auth-logo">
+        <span class="logo-icon">⚓</span>
+        <h1>FloatYourBoat</h1>
+        <p>Your marketplace for buying &amp; selling boats</p>
+      </div>
+
+      <!-- Tabs -->
+      <div class="auth-tabs">
+        <button class="auth-tab active" id="tab-login" onclick="switchTab('login')">Log In</button>
+        <button class="auth-tab" id="tab-register" onclick="switchTab('register')">Register</button>
+      </div>
+
+      <!-- Error / Success messages -->
+      <div id="auth-alert" class="alert alert-danger hidden">
+        <span id="auth-alert-msg"></span>
+        <button class="close-btn" onclick="hideAlert()">✕</button>
+      </div>
+
+      <!-- Login Form -->
+      <form id="form-login" class="auth-form active" onsubmit="handleLogin(event)">
+        <div class="form-group">
+          <label for="login-username">Username</label>
+          <input type="text" id="login-username" placeholder="Enter your username" autocomplete="username" required />
+        </div>
+        <div class="form-group">
+          <label for="login-password">Password</label>
+          <input type="password" id="login-password" placeholder="Enter your password" autocomplete="current-password" required />
+        </div>
+        <button type="submit" class="btn btn-primary btn-block btn-lg">Log In</button>
+        <p class="text-center mt-2" style="font-size:0.85rem; color: var(--mid-gray);">
+          Demo credentials: <code>alice_buyer / password</code> &nbsp;|&nbsp; <code>bob_seller / password</code>
+        </p>
+      </form>
+
+      <!-- Register Form -->
+      <form id="form-register" class="auth-form" onsubmit="handleRegister(event)">
+        <div class="form-group">
+          <label>I am a…</label>
+          <div class="role-selector">
+            <button type="button" class="role-option selected" id="role-buyer" onclick="selectRole('buyer')">
+              <span class="role-icon">🔍</span>
+              Buyer
+            </button>
+            <button type="button" class="role-option" id="role-seller" onclick="selectRole('seller')">
+              <span class="role-icon">📋</span>
+              Seller
+            </button>
+          </div>
+          <input type="hidden" id="reg-role" value="buyer" />
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="reg-name">Full Name</label>
+            <input type="text" id="reg-name" placeholder="Jane Smith" required />
+          </div>
+          <div class="form-group">
+            <label for="reg-email">Email</label>
+            <input type="email" id="reg-email" placeholder="jane@example.com" required />
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="reg-username">Username</label>
+          <input type="text" id="reg-username" placeholder="Choose a username" autocomplete="username" required />
+        </div>
+        <div class="form-group">
+          <label for="reg-password">Password</label>
+          <input type="password" id="reg-password" placeholder="At least 6 characters" autocomplete="new-password" required />
+          <p class="form-hint">Minimum 6 characters.</p>
+        </div>
+        <button type="submit" class="btn btn-primary btn-block btn-lg">Create Account</button>
+      </form>
+    </div>
+  </div>
+
+  <script src="js/data.js"></script>
+  <script src="js/auth.js"></script>
+  <script>
+    FYB.initData();
+
+    // If already logged in, go to browse
+    if (FYBAuth.getCurrentUser()) {
+      window.location.href = 'browse.html';
+    }
+
+    function switchTab(tab) {
+      document.getElementById('form-login').classList.toggle('active', tab === 'login');
+      document.getElementById('form-register').classList.toggle('active', tab === 'register');
+      document.getElementById('tab-login').classList.toggle('active', tab === 'login');
+      document.getElementById('tab-register').classList.toggle('active', tab === 'register');
+      hideAlert();
+    }
+
+    function selectRole(role) {
+      document.getElementById('reg-role').value = role;
+      document.getElementById('role-buyer').classList.toggle('selected', role === 'buyer');
+      document.getElementById('role-seller').classList.toggle('selected', role === 'seller');
+    }
+
+    function showAlert(msg, type = 'danger') {
+      const el = document.getElementById('auth-alert');
+      el.className = `alert alert-${type}`;
+      document.getElementById('auth-alert-msg').textContent = msg;
+    }
+
+    function hideAlert() {
+      document.getElementById('auth-alert').classList.add('hidden');
+    }
+
+    function handleLogin(e) {
+      e.preventDefault();
+      const username = document.getElementById('login-username').value;
+      const password = document.getElementById('login-password').value;
+      const result = FYBAuth.login(username, password);
+      if (result.error) {
+        showAlert(result.error);
+      } else {
+        window.location.href = 'browse.html';
+      }
+    }
+
+    function handleRegister(e) {
+      e.preventDefault();
+      const name     = document.getElementById('reg-name').value;
+      const email    = document.getElementById('reg-email').value;
+      const username = document.getElementById('reg-username').value;
+      const password = document.getElementById('reg-password').value;
+      const role     = document.getElementById('reg-role').value;
+      const result = FYBAuth.register(username, password, name, email, role);
+      if (result.error) {
+        showAlert(result.error);
+      } else {
+        window.location.href = 'browse.html';
+      }
+    }
+  </script>
+</body>
+</html>
