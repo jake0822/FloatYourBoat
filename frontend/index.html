@@ -3,147 +3,97 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>FloatYourBoat — Login</title>
+  <title>FloatYourBoat — Browse Listings</title>
   <link rel="stylesheet" href="css/styles.css" />
 </head>
 <body>
-  <div class="auth-container">
-    <div class="auth-box">
-      <!-- Logo -->
-      <div class="auth-logo">
-        <span class="logo-icon">⚓</span>
-        <h1>FloatYourBoat</h1>
-        <p>Your marketplace for buying &amp; selling boats</p>
-      </div>
+  <!-- Navbar -->
+  <header class="navbar" id="navbar"></header>
 
-      <!-- Tabs -->
-      <div class="auth-tabs">
-        <button class="auth-tab active" id="tab-login" onclick="switchTab('login')">Log In</button>
-        <button class="auth-tab" id="tab-register" onclick="switchTab('register')">Register</button>
-      </div>
+  <!-- Notification Area -->
+  <div id="notification-area" style="position:sticky; top:64px; z-index:99; padding:0 2rem;"></div>
 
-      <!-- Error / Success messages -->
-      <div id="auth-alert" class="alert alert-danger hidden">
-        <span id="auth-alert-msg"></span>
-        <button class="close-btn" onclick="hideAlert()">✕</button>
-      </div>
-
-      <!-- Login Form -->
-      <form id="form-login" class="auth-form active" onsubmit="handleLogin(event)">
-        <div class="form-group">
-          <label for="login-username">Username</label>
-          <input type="text" id="login-username" placeholder="Enter your username" autocomplete="username" required />
-        </div>
-        <div class="form-group">
-          <label for="login-password">Password</label>
-          <input type="password" id="login-password" placeholder="Enter your password" autocomplete="current-password" required />
-        </div>
-        <button type="submit" class="btn btn-primary btn-block btn-lg">Log In</button>
-        <p class="text-center mt-2" style="font-size:0.85rem; color: var(--mid-gray);">
-          Demo credentials: <code>alice_buyer / password</code> &nbsp;|&nbsp; <code>bob_seller / password</code>
-        </p>
-      </form>
-
-      <!-- Register Form -->
-      <form id="form-register" class="auth-form" onsubmit="handleRegister(event)">
-        <div class="form-group">
-          <label>I am a…</label>
-          <div class="role-selector">
-            <button type="button" class="role-option selected" id="role-buyer" onclick="selectRole('buyer')">
-              <span class="role-icon">🔍</span>
-              Buyer
-            </button>
-            <button type="button" class="role-option" id="role-seller" onclick="selectRole('seller')">
-              <span class="role-icon">📋</span>
-              Seller
-            </button>
-          </div>
-          <input type="hidden" id="reg-role" value="buyer" />
-        </div>
-        <div class="form-row">
-          <div class="form-group">
-            <label for="reg-name">Full Name</label>
-            <input type="text" id="reg-name" placeholder="Jane Smith" required />
-          </div>
-          <div class="form-group">
-            <label for="reg-email">Email</label>
-            <input type="email" id="reg-email" placeholder="jane@example.com" required />
-          </div>
-        </div>
-        <div class="form-group">
-          <label for="reg-username">Username</label>
-          <input type="text" id="reg-username" placeholder="Choose a username" autocomplete="username" required />
-        </div>
-        <div class="form-group">
-          <label for="reg-password">Password</label>
-          <input type="password" id="reg-password" placeholder="At least 6 characters" autocomplete="new-password" required />
-          <p class="form-hint">Minimum 6 characters.</p>
-        </div>
-        <button type="submit" class="btn btn-primary btn-block btn-lg">Create Account</button>
-      </form>
-    </div>
+  <!-- Hero -->
+  <div class="hero">
+    <h1>🚤 Find Your Next Boat</h1>
+    <p>Browse hundreds of listings from sellers across Florida</p>
   </div>
+
+  <!-- Main Content -->
+  <main class="main-content">
+
+    <!-- Filter Bar -->
+    <div class="filter-bar">
+      <div class="form-group">
+        <label for="search">Search</label>
+        <input type="text" id="search" placeholder="Boat name, location, type…" oninput="applyFilters()" />
+      </div>
+
+      <div class="form-group">
+        <label for="type">Type</label>
+        <select id="type" onchange="applyFilters()">
+          <option value="">All Types</option>
+          <option value="Runabout">Runabout</option>
+          <option value="Center Console">Center Console</option>
+          <option value="Pontoon">Pontoon</option>
+          <option value="Express Cruiser">Express Cruiser</option>
+          <option value="Wake Boat">Wake Boat</option>
+          <option value="Bay Boat">Bay Boat</option>
+          <option value="Kayak">Kayak</option>
+          <option value="Sailboat">Sailboat</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label for="min-price">Min Price ($)</label>
+        <input type="number" id="min-price" placeholder="0" min="0" onchange="applyFilters()" />
+      </div>
+
+      <div class="form-group">
+        <label for="max-price">Max Price ($)</label>
+        <input type="number" id="max-price" placeholder="No limit" min="0" onchange="applyFilters()" />
+      </div>
+
+      <div class="form-group">
+        <label for="sort">Sort By</label>
+        <select id="sort" onchange="applyFilters()">
+          <option value="newest">Newest First</option>
+          <option value="oldest">Oldest First</option>
+          <option value="price-asc">Price: Low to High</option>
+          <option value="price-desc">Price: High to Low</option>
+          <option value="popularity">Most Popular</option>
+          <option value="proximity">Nearest to Me</option>
+        </select>
+      </div>
+
+      <div class="form-group" style="min-width:auto;">
+        <label style="display:flex; align-items:center; gap:0.4rem; cursor:pointer;">
+          <input type="checkbox" id="show-sold" onchange="applyFilters()" />
+          Show Sold
+        </label>
+      </div>
+
+      <button class="btn btn-outline btn-sm" onclick="clearFilters()">Clear</button>
+    </div>
+
+    <!-- Result Count & Header -->
+    <div class="section-header">
+      <h2>Listings</h2>
+      <span id="result-count" style="color:var(--mid-gray); font-size:0.9rem;"></span>
+    </div>
+
+    <!-- Listings Grid -->
+    <div class="listings-grid" id="listings-container">
+      <p style="color:var(--mid-gray);">Loading listings…</p>
+    </div>
+  </main>
+
+  <footer>
+    <p>© 2026 FloatYourBoat &mdash; FSU Database Class Project &nbsp;|&nbsp; <a href="login">Login</a></p>
+  </footer>
 
   <script src="js/data.js"></script>
   <script src="js/auth.js"></script>
-  <script>
-    FYB.initData();
-
-    // If already logged in, go to browse
-    if (FYBAuth.getCurrentUser()) {
-      window.location.href = 'browse.html';
-    }
-
-    function switchTab(tab) {
-      document.getElementById('form-login').classList.toggle('active', tab === 'login');
-      document.getElementById('form-register').classList.toggle('active', tab === 'register');
-      document.getElementById('tab-login').classList.toggle('active', tab === 'login');
-      document.getElementById('tab-register').classList.toggle('active', tab === 'register');
-      hideAlert();
-    }
-
-    function selectRole(role) {
-      document.getElementById('reg-role').value = role;
-      document.getElementById('role-buyer').classList.toggle('selected', role === 'buyer');
-      document.getElementById('role-seller').classList.toggle('selected', role === 'seller');
-    }
-
-    function showAlert(msg, type = 'danger') {
-      const el = document.getElementById('auth-alert');
-      el.className = `alert alert-${type}`;
-      document.getElementById('auth-alert-msg').textContent = msg;
-    }
-
-    function hideAlert() {
-      document.getElementById('auth-alert').classList.add('hidden');
-    }
-
-    function handleLogin(e) {
-      e.preventDefault();
-      const username = document.getElementById('login-username').value;
-      const password = document.getElementById('login-password').value;
-      const result = FYBAuth.login(username, password);
-      if (result.error) {
-        showAlert(result.error);
-      } else {
-        window.location.href = 'browse.html';
-      }
-    }
-
-    function handleRegister(e) {
-      e.preventDefault();
-      const name     = document.getElementById('reg-name').value;
-      const email    = document.getElementById('reg-email').value;
-      const username = document.getElementById('reg-username').value;
-      const password = document.getElementById('reg-password').value;
-      const role     = document.getElementById('reg-role').value;
-      const result = FYBAuth.register(username, password, name, email, role);
-      if (result.error) {
-        showAlert(result.error);
-      } else {
-        window.location.href = 'browse.html';
-      }
-    }
-  </script>
+  <script src="js/browse.js"></script>
 </body>
 </html>

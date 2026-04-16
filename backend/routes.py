@@ -14,7 +14,7 @@ def index():
 # Login page
 @app.route('/login', methods=['GET'])
 def login():
-    return 'TODO'
+    return render_template('login.html')
 
 
 # View listing page
@@ -26,8 +26,19 @@ def view_listing(listing_id: str):
 # Create or edit listing page
 @app.route('/edit-listing', methods=['GET'])
 def edit_listing():
-    return 'TODO'
+    return render_template('listing.html')
 
+
+# View seller page
+@app.route('/seller', methods=['GET'])
+def view_seller():
+    return render_template('seller.html')
+
+
+# View saved listings page
+@app.route('/saved', methods=['GET'])
+def view_saved():
+    return render_template('saved.html')
 
 # -- CSS and JS file routes --
 
@@ -50,12 +61,6 @@ def get_js_file(file_path: str):
     
     with open(full_path, 'r') as f:
         return Response(f.read(), 200, mimetype='text/javascript')
-
-
-# View seller page
-@app.route('/seller/<seller_username>', methods=['GET'])
-def view_seller(seller_username: str):
-    return 'TODO'
 
 
 # -- API routes --
