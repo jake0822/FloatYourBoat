@@ -15,7 +15,7 @@ function setCurrentUser(user) {
 
 function logout() {
   sessionStorage.removeItem(FYB.KEYS.CURRENT_USER);
-  window.location.href = 'index.html';
+  window.location.href = 'login';
 }
 
 /**
@@ -24,7 +24,7 @@ function logout() {
  */
 function requireAuth() {
   if (!getCurrentUser()) {
-    window.location.href = 'index.html';
+    window.location.href = 'login';
   }
 }
 
@@ -34,7 +34,7 @@ function requireAuth() {
 function requireBuyer() {
   const user = getCurrentUser();
   if (!user || user.role !== 'buyer') {
-    window.location.href = user ? 'browse.html' : 'index.html';
+    window.location.href = user ? '/' : 'login';
   }
 }
 
@@ -44,7 +44,7 @@ function requireBuyer() {
 function requireSeller() {
   const user = getCurrentUser();
   if (!user || user.role !== 'seller') {
-    window.location.href = user ? 'browse.html' : 'index.html';
+    window.location.href = user ? '/' : 'login';
   }
 }
 
@@ -81,21 +81,21 @@ function renderNav() {
   if (!el) return;
 
   const user = getCurrentUser();
-  const page = location.pathname.split('/').pop() || 'index.html';
+  const page = location.pathname.split('/').pop() || 'login';
 
   const active = (href) => page === href ? 'active' : '';
 
   let navLinks = `
-    <a href="browse.html" class="${active('browse.html')}">Browse</a>
+    <a href="/" class="${active('/')}">Browse</a>
   `;
 
   let userSection = '';
   if (user) {
     if (user.role === 'buyer') {
-      navLinks += `<a href="saved.html" class="${active('saved.html')}">Saved</a>`;
+      navLinks += `<a href="saved" class="${active('saved')}">Saved</a>`;
     }
     if (user.role === 'seller') {
-      navLinks += `<a href="seller.html" class="${active('seller.html')}">My Listings</a>`;
+      navLinks += `<a href="seller" class="${active('seller')}">My Listings</a>`;
     }
     userSection = `
       <div class="user-info">
@@ -105,11 +105,11 @@ function renderNav() {
       </div>
     `;
   } else {
-    userSection = `<a href="index.html" class="btn btn-outline btn-sm ${active('index.html')}">Login</a>`;
+    userSection = `<a href="login" class="btn btn-outline btn-sm ${active('login')}">Login</a>`;
   }
 
   el.innerHTML = `
-    <a href="browse.html" class="brand">
+    <a href="/" class="brand">
       <span class="anchor-icon">⚓</span> FloatYourBoat
     </a>
     <nav>${navLinks}</nav>

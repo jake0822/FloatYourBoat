@@ -119,7 +119,7 @@
           <p class="listing-description">${FYBAuth.escapeHtml(listing.description)}</p>
 
           <div class="listing-actions">
-            <a href="browse.html" class="btn btn-outline">← Back to Browse</a>
+            <a href="/" class="btn btn-outline">← Back to Browse</a>
             ${actionBtns}
           </div>
         </div>
@@ -176,7 +176,7 @@
         <div class="empty-state">
           <div class="empty-icon">⚓</div>
           <h3>${msg}</h3>
-          <a href="browse.html" class="btn btn-primary mt-2">Back to Browse</a>
+          <a href="/" class="btn btn-primary mt-2">Back to Browse</a>
         </div>`;
     }
   }
