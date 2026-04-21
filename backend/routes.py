@@ -48,7 +48,7 @@ def get_css_file(file_path: str):
     if not os.path.isfile(full_path):
         return 'File not found', 404
     
-    with open(full_path, 'r') as f:
+    with open(full_path, 'r', encoding='utf-8') as f:
         return Response(f.read(), 200, mimetype='text/css')
 
 
@@ -59,7 +59,7 @@ def get_js_file(file_path: str):
     if not os.path.isfile(full_path):
         return 'File not found', 404
     
-    with open(full_path, 'r') as f:
+    with open(full_path, 'r', encoding='utf-8') as f:
         return Response(f.read(), 200, mimetype='text/javascript')
 
 
