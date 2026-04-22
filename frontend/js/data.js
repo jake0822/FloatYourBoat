@@ -9,6 +9,7 @@ const KEYS = {
   USERS:         'fyb_users',
   CURRENT_USER:  'fyb_current_user',
   SAVED_LISTINGS:'fyb_saved_listings',
+  GEO_CACHE:     'fyb_geo_cache',
 };
 
 // ── Sample Data ───────────────────────────────────────────────────────────────
@@ -19,6 +20,7 @@ const SAMPLE_USERS = [
     role: 'buyer',
     name: 'Alice Johnson',
     email: 'alice@example.com',
+    location: 'Tallahassee, FL',
   },
   {
     id: 'u2',
@@ -33,6 +35,7 @@ const SAMPLE_USERS = [
     role: 'buyer',
     name: 'Carol Williams',
     email: 'carol@example.com',
+    location: 'Orlando, FL',
   },
   {
     id: 'u4',
@@ -233,6 +236,8 @@ function initData() {
   if (!localStorage.getItem(KEYS.LISTINGS)) {
     localStorage.setItem(KEYS.LISTINGS, JSON.stringify(SAMPLE_LISTINGS));
   }
+  normalizeStoredUsers();
+  normalizeStoredListings();
 }
 
 // ── Listings ──────────────────────────────────────────────────────────────────
@@ -284,6 +289,15 @@ function getUsers() {
 
 function saveUsers(users) {
   localStorage.setItem(KEYS.USERS, JSON.stringify(users));
+}
+
+function updateUser(id, updates) {
+  const users = getUsers();
+  const idx = users.findIndex(u => u.id === id);
+  if (idx === -1) return null;
+  users[idx] = { ...users[idx], ...updates };
+  saveUsers(users);
+  return users[idx];
 }
 
 function getUserById(id) {
@@ -381,6 +395,115 @@ function getSaveCount(listing) {
   return listing.savedBy ? listing.savedBy.length : 0;
 }
 
+function normalizeStoredUsers() {
+  const users = getUsers();
+  let changed = false;
+  const normalized = users.map(u => {
+    if (u.role !== 'buyer') return u;
+    const location = (u.location || u.city || '').trim();
+    if (u.location !== location || Object.hasOwn(u, 'city')) {
+      changed = true;
+      const copy = { ...u, location };
+      delete copy.city;
+      return copy;
+    }
+    return u;
+  });
+  if (changed) saveUsers(normalized);
+}
+
+function normalizeStoredListings() {
+  const listings = getListings();
+  let changed = false;
+  const normalized = listings.map(l => {
+    const location = (l.location || l.city || '').trim();
+    if (l.location !== location || Object.hasOwn(l, 'city')) {
+      changed = true;
+      const copy = { ...l, location };
+      delete copy.city;
+      return copy;
+    }
+    return l;
+  });
+  if (changed) saveListings(normalized);
+}
+
+function getGeoCache() {
+  const raw = localStorage.getItem(KEYS.GEO_CACHE);
+  if (!raw) return {};
+  try {
+    return JSON.parse(raw);
+  } catch {
+    return {};
+  }
+}
+
+function saveGeoCache(cache) {
+  localStorage.setItem(KEYS.GEO_CACHE, JSON.stringify(cache));
+}
+
+let geocodeQueue = Promise.resolve();
+// Open-Meteo free geocoding usage is generous, but we still throttle and cache
+// to avoid bursty client behavior and reduce unnecessary requests.
+const GEOCODE_THROTTLE_INTERVAL_MS = 1000;
+let lastGeocodeAt = 0;
+
+function queueGeocodeRequest(task) {
+  const run = geocodeQueue
+    .catch(() => {})
+    .then(async () => {
+      const elapsed = Date.now() - lastGeocodeAt;
+      if (elapsed < GEOCODE_THROTTLE_INTERVAL_MS) {
+        await new Promise(resolve => setTimeout(resolve, GEOCODE_THROTTLE_INTERVAL_MS - elapsed));
+      }
+      lastGeocodeAt = Date.now();
+      return task();
+    });
+
+  geocodeQueue = run.then(() => undefined, () => undefined);
+  return run;
+}
+
+async function geocodeLocation(location) {
+  const cleanLocation = (location || '').trim();
+  if (!cleanLocation) return null;
+
+  const key = cleanLocation.toLowerCase();
+  const cache = getGeoCache();
+  if (cache[key]) return cache[key];
+
+  const result = await queueGeocodeRequest(async () => {
+    const url = `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(cleanLocation)}&count=1&language=en&format=json`;
+    const res = await fetch(url, {
+      headers: {
+        Accept: 'application/json',
+      },
+    });
+
+    if (!res.ok) {
+      throw new Error('Geocoding request failed.');
+    }
+
+    const payload = await res.json();
+    const top = payload?.results?.[0];
+    if (!top) return null;
+
+    const lat = parseFloat(top.latitude);
+    const lng = parseFloat(top.longitude);
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+      return null;
+    }
+
+    const parts = [top.name, top.admin1, top.country].filter(Boolean);
+    return { lat, lng, displayName: parts.join(', ') };
+  });
+
+  if (!result) return null;
+  cache[key] = result;
+  saveGeoCache(cache);
+  return result;
+}
+
 // ── Exports (global) ──────────────────────────────────────────────────────────
 // All functions and constants are made available on the window object so any
 // page script can call them without a module bundler.
@@ -397,6 +520,7 @@ Object.assign(window.FYB, {
   getListingsBySeller,
   getUsers,
   saveUsers,
+  updateUser,
   getUserById,
   getUserByUsername,
   registerUser,
@@ -409,4 +533,5 @@ Object.assign(window.FYB, {
   formatPrice,
   formatDate,
   getSaveCount,
+  geocodeLocation,
 });

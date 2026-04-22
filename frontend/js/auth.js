@@ -57,11 +57,21 @@ function login(username) {
 }
 
 // ── Register ───────────────────────────────────────────────────────────────────
-function register(username, name, email, role) {
+function register(username, name, email, role, location = '') {
   if (!username || !name || !email || !role) {
     return { error: 'All fields are required.' };
   }
-  const result = FYB.registerUser({ username: username.trim(), name: name.trim(), email: email.trim(), role });
+  const cleanLocation = location.trim();
+  if (role === 'buyer' && !cleanLocation) {
+    return { error: 'Location is required for buyer accounts.' };
+  }
+  const result = FYB.registerUser({
+    username: username.trim(),
+    name: name.trim(),
+    email: email.trim(),
+    role,
+    location: role === 'buyer' ? cleanLocation : '',
+  });
   if (result.error) return result;
   setCurrentUser(result);
   return { user: result };
