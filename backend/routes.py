@@ -1,6 +1,7 @@
-from app import app, FRONTEND_PATH
-from flask import render_template, Response
+from app import app, FRONTEND_PATH, get_db
+from flask import render_template, Response, jsonify, request
 import os
+import sqlite3
 
 
 # -- Page routes --
@@ -88,10 +89,43 @@ def delete_seller():
     pass
 
 
+@app.route('/api/get_listing/<int:listing_id>', methods=['GET'])
+def get_listing(listing_id: int):
+    db = get_db()
+    listing = db.execute("SELECT * FROM Listings WHERE listing_id = ?", [listing_id]).fetchone()
+
+    listing_dict = dict(listing)
+    listing_dict['is_sold'] = bool(listing_dict['is_sold'])
+
+    return jsonify(listing_dict)
+
+
 # Add or update listing
 @app.route('/api/add_or_update_listing', methods=['POST', 'PUT'])
 def add_or_update_listing():
-    pass
+    listing: dict = request.json
+    listing_id = listing.get('listing_id')
+
+    db = get_db()
+    if listing_id is None or listing_id == 0:
+        # Create new listing
+        next_id_result = db.execute('SELECT MAX(listing_id) FROM Listings').fetchone()
+        next_id = (next_id_result[0] or 0) + 1
+        db.execute(
+            'INSERT INTO Listings (listing_id, name, description, location, price, date_listed, is_sold, seller_username) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+            [next_id, listing['name'], listing['description'], listing['location'],
+             listing['price'], listing['date_listed'], int(listing['is_sold']), listing['seller_username']]
+        )
+    else:
+        # Update existing listing
+        db.execute(
+            'UPDATE Listings SET name = ?, description = ?, location = ?, price = ?, date_listed = ?, is_sold = ?',
+            [listing['name'], listing['description'], listing['location'],
+             listing['price'], listing['date_listed'], int(listing['is_sold'], listing['seller_username'])]
+        )
+    
+    db.commit()
+    return jsonify({'success': True})
 
 
 # Delete listing
