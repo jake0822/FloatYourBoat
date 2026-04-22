@@ -16,7 +16,6 @@ const SAMPLE_USERS = [
   {
     id: 'u1',
     username: 'alice_buyer',
-    password: 'password',
     role: 'buyer',
     name: 'Alice Johnson',
     email: 'alice@example.com',
@@ -24,7 +23,6 @@ const SAMPLE_USERS = [
   {
     id: 'u2',
     username: 'bob_seller',
-    password: 'password',
     role: 'seller',
     name: 'Bob Martinez',
     email: 'bob@example.com',
@@ -32,7 +30,6 @@ const SAMPLE_USERS = [
   {
     id: 'u3',
     username: 'carol_buyer',
-    password: 'password',
     role: 'buyer',
     name: 'Carol Williams',
     email: 'carol@example.com',
@@ -40,7 +37,6 @@ const SAMPLE_USERS = [
   {
     id: 'u4',
     username: 'dave_seller',
-    password: 'password',
     role: 'seller',
     name: 'Dave Thompson',
     email: 'dave@example.com',
