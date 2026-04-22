@@ -177,8 +177,13 @@
   }
 
   function normalizeStateCode(stateText) {
-    const normalized = (stateText || '').toLowerCase();
-    if (normalized === 'fl' || normalized === 'florida') return 'FL';
+    const normalized = (stateText || '').trim().toLowerCase();
+    if (!normalized) return null;
+    for (const [stateCode, state] of Object.entries(BUYER_LOCATIONS)) {
+      if (normalized === stateCode.toLowerCase() || normalized === state.label.toLowerCase()) {
+        return stateCode;
+      }
+    }
     return null;
   }
 
