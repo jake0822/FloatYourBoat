@@ -92,14 +92,16 @@
   <script src="js/data.js"></script>
   <script src="js/auth.js"></script>
   <script>
-    FYB.initData();
-    setupRegistrationLocationSelectors();
-    selectRole('buyer');
+    document.addEventListener('DOMContentLoaded', () => {
+      FYB.initData();
+      setupRegistrationLocationSelectors();
+      selectRole('buyer');
 
-    // If already logged in, go to browse
-    if (FYBAuth.getCurrentUser()) {
-      window.location.href = '/';
-    }
+      // If already logged in, go to browse
+      if (FYBAuth.getCurrentUser()) {
+        window.location.href = '/';
+      }
+    });
 
     function setupRegistrationLocationSelectors() {
       const stateSelect = document.getElementById('reg-state');
@@ -148,6 +150,10 @@
       }
 
       citySelect.disabled = !state;
+    }
+
+    function buildBuyerLocation(cityName, stateCode) {
+      return `${cityName}, ${stateCode}`;
     }
 
     function switchTab(tab) {
@@ -204,7 +210,7 @@
       const role     = document.getElementById('reg-role').value;
       const stateCode = document.getElementById('reg-state').value;
       const cityName = document.getElementById('reg-city').value;
-      const location = role === 'buyer' ? `${cityName}, ${stateCode}` : '';
+      const location = role === 'buyer' ? buildBuyerLocation(cityName, stateCode) : '';
 
       if (role === 'buyer') {
         if (!stateCode || !cityName) {
