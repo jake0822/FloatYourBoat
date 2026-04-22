@@ -60,7 +60,7 @@
       userLat = existing.lat;
       userLng = existing.lng;
     } else {
-      renderCityOptions(citySelect, stateSelect.value, '');
+      renderCityOptions(citySelect, '', '');
     }
 
     stateSelect.addEventListener('change', () => {
