@@ -10,48 +10,198 @@
   let userLat = null;
   let userLng = null;
   let popularityAlertShown = false;
+  const BUYER_LOCATIONS = {
+    FL: {
+      label: 'Florida',
+      cities: [
+        { name: 'Tallahassee', lat: 30.4383, lng: -84.2807 },
+        { name: 'Orlando', lat: 28.5383, lng: -81.3792 },
+        { name: 'Panama City', lat: 30.1588, lng: -85.6602 },
+        { name: 'Gainesville', lat: 29.6516, lng: -82.3248 },
+        { name: 'Destin', lat: 30.3935, lng: -86.4958 },
+        { name: 'Fort Lauderdale', lat: 26.1224, lng: -80.1373 },
+        { name: 'Pensacola', lat: 30.4213, lng: -87.2169 },
+        { name: 'Miami', lat: 25.7617, lng: -80.1918 },
+        { name: 'Jacksonville', lat: 30.3322, lng: -81.6557 },
+        { name: 'Tampa', lat: 27.9506, lng: -82.4572 },
+      ],
+    },
+  };
 
   // ── Init ───────────────────────────────────────────────────────────────────
   document.addEventListener('DOMContentLoaded', () => {
     FYB.initData();
     FYBAuth.renderNav();
     allListings = FYB.getListings().filter(l => l.status === 'available');
+    setupBuyerLocationSelectors();
     applyFilters();
     setupProximitySort();
   });
 
   // ── Proximity Sort Setup ───────────────────────────────────────────────────
+  function setupBuyerLocationSelectors() {
+    const stateSelect = document.getElementById('buyer-state');
+    const citySelect = document.getElementById('buyer-city');
+    if (!stateSelect || !citySelect) return;
+
+    const user = FYBAuth.getCurrentUser();
+    renderStateOptions(stateSelect);
+
+    if (!user || user.role !== 'buyer') {
+      stateSelect.disabled = true;
+      citySelect.disabled = true;
+      return;
+    }
+
+    const existing = findLocationByText(user.location || '');
+    if (existing) {
+      stateSelect.value = existing.stateCode;
+      renderCityOptions(citySelect, existing.stateCode, existing.cityName);
+      userLat = existing.lat;
+      userLng = existing.lng;
+    } else {
+      renderCityOptions(citySelect, '', '');
+    }
+
+    stateSelect.addEventListener('change', () => {
+      renderCityOptions(citySelect, stateSelect.value, '');
+      persistBuyerLocation(user.id, '');
+      userLat = null;
+      userLng = null;
+      if (document.getElementById('sort')?.value === 'proximity') {
+        showNotification('Select your city to sort by proximity.', 'warning');
+      }
+    });
+
+    citySelect.addEventListener('change', () => {
+      if (!stateSelect.value || !citySelect.value) {
+        persistBuyerLocation(user.id, '');
+        userLat = null;
+        userLng = null;
+        return;
+      }
+
+      const selected = findCity(stateSelect.value, citySelect.value);
+      if (!selected) return;
+      persistBuyerLocation(user.id, `${selected.name}, ${stateSelect.value}`);
+      userLat = selected.lat;
+      userLng = selected.lng;
+      if (document.getElementById('sort')?.value === 'proximity') {
+        applyFilters();
+      }
+    });
+  }
+
   function setupProximitySort() {
     const sortSelect = document.getElementById('sort');
     if (!sortSelect) return;
 
     sortSelect.addEventListener('change', () => {
       if (sortSelect.value === 'proximity') {
-        if (userLat === null) {
-          requestLocation();
+        const ready = ensureBuyerLocation();
+        if (!ready) {
+          sortSelect.value = 'newest';
         }
       }
       applyFilters();
     });
   }
 
-  function requestLocation() {
-    if (!navigator.geolocation) {
-      showNotification('Geolocation is not supported by your browser.', 'warning');
-      return;
+  function ensureBuyerLocation() {
+    const user = FYBAuth.getCurrentUser();
+    if (!user || user.role !== 'buyer') {
+      showNotification('Log in as a buyer to sort by proximity.', 'warning');
+      return false;
     }
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        userLat = pos.coords.latitude;
-        userLng = pos.coords.longitude;
-        applyFilters();
-      },
-      () => {
-        showNotification('Location access denied. Using default sort.', 'warning');
-        document.getElementById('sort').value = 'newest';
-        applyFilters();
+
+    const stateSelect = document.getElementById('buyer-state');
+    const citySelect = document.getElementById('buyer-city');
+    if (!stateSelect?.value || !citySelect?.value) {
+      showNotification('Select your state and city in the "My Location" filters to sort by proximity.', 'warning');
+      return false;
+    }
+
+    const selected = findCity(stateSelect.value, citySelect.value);
+    if (!selected) {
+      showNotification('Please select a valid city.', 'warning');
+      return false;
+    }
+
+    persistBuyerLocation(user.id, `${selected.name}, ${stateSelect.value}`);
+    userLat = selected.lat;
+    userLng = selected.lng;
+    return true;
+  }
+
+  function renderStateOptions(stateSelect) {
+    stateSelect.replaceChildren();
+    const placeholder = document.createElement('option');
+    placeholder.value = '';
+    placeholder.textContent = 'Select state';
+    stateSelect.appendChild(placeholder);
+
+    for (const [code, state] of Object.entries(BUYER_LOCATIONS)) {
+      const option = document.createElement('option');
+      option.value = code;
+      option.textContent = state.label;
+      stateSelect.appendChild(option);
+    }
+  }
+
+  function renderCityOptions(citySelect, stateCode, selectedCity = '') {
+    const state = BUYER_LOCATIONS[stateCode];
+    citySelect.replaceChildren();
+    const placeholder = document.createElement('option');
+    placeholder.value = '';
+    placeholder.textContent = 'Select city';
+    citySelect.appendChild(placeholder);
+
+    if (state) {
+      for (const city of state.cities) {
+        const option = document.createElement('option');
+        option.value = city.name;
+        option.textContent = city.name;
+        citySelect.appendChild(option);
       }
-    );
+    }
+
+    citySelect.disabled = !state;
+    if (selectedCity && state?.cities.some(c => c.name === selectedCity)) {
+      citySelect.value = selectedCity;
+    }
+  }
+
+  function persistBuyerLocation(userId, location) {
+    const updated = FYB.updateUser(userId, { location });
+    if (updated) FYBAuth.setCurrentUser(updated);
+  }
+
+  function findCity(stateCode, cityName) {
+    const state = BUYER_LOCATIONS[stateCode];
+    if (!state) return null;
+    return state.cities.find(c => c.name === cityName) || null;
+  }
+
+  function findLocationByText(locationText) {
+    const clean = (locationText || '').trim();
+    if (!clean) return null;
+    const [cityRaw, stateRaw = ''] = clean.split(',').map(part => part.trim());
+    const stateCode = normalizeStateCode(stateRaw);
+    if (!stateCode) return null;
+    const city = findCity(stateCode, cityRaw);
+    if (!city) return null;
+    return { stateCode, cityName: city.name, lat: city.lat, lng: city.lng };
+  }
+
+  function normalizeStateCode(stateText) {
+    const normalized = (stateText || '').trim().toLowerCase();
+    if (!normalized) return null;
+    for (const [stateCode, state] of Object.entries(BUYER_LOCATIONS)) {
+      if (normalized === stateCode.toLowerCase() || normalized === state.label.toLowerCase()) {
+        return stateCode;
+      }
+    }
+    return null;
   }
 
   // ── Filters & Sort ─────────────────────────────────────────────────────────
@@ -104,8 +254,12 @@
       case 'proximity':
         if (userLat !== null) {
           results.sort((a, b) => {
-            const dA = FYB.haversineDistance(userLat, userLng, a.lat, a.lng);
-            const dB = FYB.haversineDistance(userLat, userLng, b.lat, b.lng);
+            const dA = Number.isFinite(a.lat) && Number.isFinite(a.lng)
+              ? FYB.haversineDistance(userLat, userLng, a.lat, a.lng)
+              : Infinity;
+            const dB = Number.isFinite(b.lat) && Number.isFinite(b.lng)
+              ? FYB.haversineDistance(userLat, userLng, b.lat, b.lng)
+              : Infinity;
             return dA - dB;
           });
         }
