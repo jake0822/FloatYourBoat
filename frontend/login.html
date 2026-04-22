@@ -95,7 +95,6 @@
     document.addEventListener('DOMContentLoaded', () => {
       FYB.initData();
       setupRegistrationLocationSelectors();
-      selectRole('buyer');
 
       // If already logged in, go to browse
       if (FYBAuth.getCurrentUser()) {
@@ -152,7 +151,7 @@
       citySelect.disabled = !state;
     }
 
-    function buildBuyerLocation(cityName, stateCode) {
+    function formatBuyerLocation(cityName, stateCode) {
       return `${cityName}, ${stateCode}`;
     }
 
@@ -210,7 +209,7 @@
       const role     = document.getElementById('reg-role').value;
       const stateCode = document.getElementById('reg-state').value;
       const cityName = document.getElementById('reg-city').value;
-      const location = role === 'buyer' ? buildBuyerLocation(cityName, stateCode) : '';
+      const location = role === 'buyer' ? formatBuyerLocation(cityName, stateCode) : '';
 
       if (role === 'buyer') {
         if (!stateCode || !cityName) {
