@@ -10,23 +10,7 @@
   let userLat = null;
   let userLng = null;
   let popularityAlertShown = false;
-  const BUYER_LOCATIONS = {
-    FL: {
-      label: 'Florida',
-      cities: [
-        { name: 'Tallahassee', lat: 30.4383, lng: -84.2807 },
-        { name: 'Orlando', lat: 28.5383, lng: -81.3792 },
-        { name: 'Panama City', lat: 30.1588, lng: -85.6602 },
-        { name: 'Gainesville', lat: 29.6516, lng: -82.3248 },
-        { name: 'Destin', lat: 30.3935, lng: -86.4958 },
-        { name: 'Fort Lauderdale', lat: 26.1224, lng: -80.1373 },
-        { name: 'Pensacola', lat: 30.4213, lng: -87.2169 },
-        { name: 'Miami', lat: 25.7617, lng: -80.1918 },
-        { name: 'Jacksonville', lat: 30.3322, lng: -81.6557 },
-        { name: 'Tampa', lat: 27.9506, lng: -82.4572 },
-      ],
-    },
-  };
+  const BUYER_LOCATIONS = FYB.BUYER_LOCATIONS || {};
 
   // ── Init ───────────────────────────────────────────────────────────────────
   document.addEventListener('DOMContentLoaded', () => {
