@@ -401,7 +401,7 @@ function normalizeStoredUsers() {
   const normalized = users.map(u => {
     if (u.role !== 'buyer') return u;
     const location = (u.location || u.city || '').trim();
-    if (u.location !== location || Object.prototype.hasOwnProperty.call(u, 'city')) {
+    if (u.location !== location || Object.hasOwn(u, 'city')) {
       changed = true;
       const copy = { ...u, location };
       delete copy.city;
@@ -417,7 +417,7 @@ function normalizeStoredListings() {
   let changed = false;
   const normalized = listings.map(l => {
     const location = (l.location || l.city || '').trim();
-    if (l.location !== location || Object.prototype.hasOwnProperty.call(l, 'city')) {
+    if (l.location !== location || Object.hasOwn(l, 'city')) {
       changed = true;
       const copy = { ...l, location };
       delete copy.city;
@@ -442,6 +442,28 @@ function saveGeoCache(cache) {
   localStorage.setItem(KEYS.GEO_CACHE, JSON.stringify(cache));
 }
 
+let geocodeQueue = Promise.resolve();
+// Open-Meteo free geocoding usage is generous, but we still throttle and cache
+// to avoid bursty client behavior and reduce unnecessary requests.
+const GEOCODE_THROTTLE_INTERVAL_MS = 1000;
+let lastGeocodeAt = 0;
+
+function queueGeocodeRequest(task) {
+  const run = geocodeQueue
+    .catch(() => {})
+    .then(async () => {
+      const elapsed = Date.now() - lastGeocodeAt;
+      if (elapsed < GEOCODE_THROTTLE_INTERVAL_MS) {
+        await new Promise(resolve => setTimeout(resolve, GEOCODE_THROTTLE_INTERVAL_MS - elapsed));
+      }
+      lastGeocodeAt = Date.now();
+      return task();
+    });
+
+  geocodeQueue = run.then(() => undefined, () => undefined);
+  return run;
+}
+
 async function geocodeLocation(location) {
   const cleanLocation = (location || '').trim();
   if (!cleanLocation) return null;
@@ -450,30 +472,33 @@ async function geocodeLocation(location) {
   const cache = getGeoCache();
   if (cache[key]) return cache[key];
 
-  const url = `https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(cleanLocation)}`;
-  const res = await fetch(url, {
-    headers: {
-      Accept: 'application/json',
-    },
+  const result = await queueGeocodeRequest(async () => {
+    const url = `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(cleanLocation)}&count=1&language=en&format=json`;
+    const res = await fetch(url, {
+      headers: {
+        Accept: 'application/json',
+      },
+    });
+
+    if (!res.ok) {
+      throw new Error('Geocoding request failed.');
+    }
+
+    const payload = await res.json();
+    const top = payload?.results?.[0];
+    if (!top) return null;
+
+    const lat = parseFloat(top.latitude);
+    const lng = parseFloat(top.longitude);
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+      return null;
+    }
+
+    const parts = [top.name, top.admin1, top.country].filter(Boolean);
+    return { lat, lng, displayName: parts.join(', ') };
   });
 
-  if (!res.ok) {
-    throw new Error('Geocoding request failed.');
-  }
-
-  const payload = await res.json();
-  if (!Array.isArray(payload) || payload.length === 0) {
-    return null;
-  }
-
-  const top = payload[0];
-  const lat = Number.parseFloat(top.lat);
-  const lng = Number.parseFloat(top.lon);
-  if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
-    return null;
-  }
-
-  const result = { lat, lng, displayName: top.display_name };
+  if (!result) return null;
   cache[key] = result;
   saveGeoCache(cache);
   return result;

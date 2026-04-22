@@ -117,8 +117,9 @@
 
     try {
       geocoded = await FYB.geocodeLocation(location);
-    } catch {
-      showNotification('Map service is unavailable. Please try again.', 'danger');
+    } catch (err) {
+      console.error('Geocoding failed:', err);
+      showNotification('Map service unavailable. Please try again.', 'danger');
       return;
     }
 

@@ -130,13 +130,29 @@
       }
     }
 
-    function handleRegister(e) {
+    async function handleRegister(e) {
       e.preventDefault();
       const name     = document.getElementById('reg-name').value;
       const email    = document.getElementById('reg-email').value;
       const username = document.getElementById('reg-username').value;
       const role     = document.getElementById('reg-role').value;
       const location = document.getElementById('reg-location').value;
+
+      if (role === 'buyer') {
+        let geo;
+        try {
+          geo = await FYB.geocodeLocation(location);
+        } catch (err) {
+          console.error('Registration geocoding failed:', err);
+          showAlert(`Map service unavailable: ${err?.message || 'unknown error'}.`);
+          return;
+        }
+        if (!geo) {
+          showAlert('Invalid city/location. Please enter a valid city.');
+          return;
+        }
+      }
+
       const result = FYBAuth.register(username, name, email, role, location);
       if (result.error) {
         showAlert(result.error);
@@ -145,7 +161,6 @@
       }
     }
 
-    selectRole('buyer');
   </script>
 </body>
 </html>

@@ -16,11 +16,62 @@
     FYB.initData();
     FYBAuth.renderNav();
     allListings = FYB.getListings().filter(l => l.status === 'available');
+    setupBuyerLocationField();
     applyFilters();
     setupProximitySort();
   });
 
   // ── Proximity Sort Setup ───────────────────────────────────────────────────
+  function setupBuyerLocationField() {
+    const input = document.getElementById('buyer-location');
+    if (!input) return;
+
+    const user = FYBAuth.getCurrentUser();
+    if (!user || user.role !== 'buyer') {
+      input.disabled = true;
+      input.placeholder = 'Login as buyer to set location';
+      return;
+    }
+
+    input.value = user.location || '';
+    input.addEventListener('change', async () => {
+      const location = input.value.trim();
+      if (!location) {
+        const updated = FYB.updateUser(user.id, { location: '' });
+        if (updated) FYBAuth.setCurrentUser(updated);
+        userLat = null;
+        userLng = null;
+        return;
+      }
+
+      let geo;
+      try {
+        geo = await FYB.geocodeLocation(location);
+      } catch (err) {
+        console.error('Buyer geocoding failed on location change:', err);
+        showNotification('Map service unavailable. Please try again.', 'danger');
+        input.value = FYBAuth.getCurrentUser()?.location || '';
+        return;
+      }
+
+      if (!geo) {
+        showNotification('Invalid city/location. Please enter a valid city.', 'warning');
+        input.value = FYBAuth.getCurrentUser()?.location || '';
+        return;
+      }
+
+      const updated = FYB.updateUser(user.id, { location });
+      if (updated) FYBAuth.setCurrentUser(updated);
+      userLat = null;
+      userLng = null;
+      if (document.getElementById('sort')?.value === 'proximity') {
+        userLat = geo.lat;
+        userLng = geo.lng;
+        applyFilters();
+      }
+    });
+  }
+
   function setupProximitySort() {
     const sortSelect = document.getElementById('sort');
     if (!sortSelect) return;
@@ -44,30 +95,32 @@
     }
 
     let location = (user.location || '').trim();
+    const locationInput = document.getElementById('buyer-location');
+    if (locationInput && locationInput.value.trim()) {
+      location = locationInput.value.trim();
+    }
     if (!location) {
-      const prompted = prompt('Enter your location (city/state) for proximity sorting:');
-      location = (prompted || '').trim();
-      if (!location) {
-        showNotification('Location is required for proximity sorting.', 'warning');
-        return false;
-      }
-      const updated = FYB.updateUser(user.id, { location });
-      if (updated) {
-        FYBAuth.setCurrentUser(updated);
-      }
+      showNotification('Enter your location in the "My Location" field to sort by proximity.', 'warning');
+      return false;
     }
 
     try {
       const geo = await FYB.geocodeLocation(location);
       if (!geo) {
-        showNotification('Could not find that location. Try a different one.', 'warning');
+        showNotification('Invalid city/location. Please enter a valid city.', 'warning');
         return false;
+      }
+      const updated = FYB.updateUser(user.id, { location });
+      if (updated) {
+        FYBAuth.setCurrentUser(updated);
+        if (locationInput) locationInput.value = updated.location || '';
       }
       userLat = geo.lat;
       userLng = geo.lng;
       return true;
-    } catch {
-      showNotification('Map service is unavailable right now. Please try again.', 'danger');
+    } catch (err) {
+      console.error('Buyer geocoding failed:', err);
+      showNotification('Map service unavailable. Please try again.', 'danger');
       return false;
     }
   }
