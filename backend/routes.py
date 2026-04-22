@@ -68,25 +68,81 @@ def get_js_file(file_path: str):
 # Add or update buyer
 @app.route('/api/add_or_update_buyer', methods=['POST', 'PUT'])
 def add_or_update_buyer():
-    pass
+    buyer: dict = request.json
+
+    db = get_db()
+
+    row_exists = db.execute('SELECT 1 FROM Buyers WHERE username = ?', [buyer['username']]).fetchone() is not None
+
+    if row_exists: 
+        db.execute('UPDATE Buyers SET name = ?, location = ? WHERE username = ?',
+            [buyer['name'], buyer['location'], buyer['username']]
+        )
+    else:
+        db.execute('INSERT INTO Buyers (username, name, location) VALUES (?, ?, ?)',
+            [buyer['username'], buyer['name'], buyer['location']]
+        )
+    
+    db.commit()
+
+    return {'success': True}
 
 
 # Delete buyer
-@app.route('/api/delete_buyer', methods=['DELETE'])
-def delete_buyer():
-    pass
+@app.route('/api/delete_buyer/<buyer_username>', methods=['DELETE'])
+def delete_buyer(buyer_username: str):
+    db = get_db()
+    result = db.execute('DELETE FROM Buyers WHERE username = ?', [buyer_username])
+    db.commit()
+
+    if result.rowcount == 0:
+        return {'error': 'Buyer not found'}, 404
+    
+    return {'success': True}
 
 
 # Add or update seller
 @app.route('/api/add_or_update_seller', methods=['POST', 'PUT'])
 def add_or_update_seller():
-    pass
+    seller: dict = request.json
+
+    db = get_db()
+
+    row_exists = db.execute('SELECT 1 FROM Sellers WHERE username = ?', [seller['username']]).fetchone() is not None
+
+    if row_exists: 
+        db.execute('UPDATE Sellers SET name = ?, email = ? WHERE username = ?',
+            [seller['name'], seller['email'], seller['username']]
+        )
+    else:
+        db.execute('INSERT INTO Sellers (username, name, email) VALUES (?, ?, ?)',
+            [seller['username'], seller['name'], seller['email']]
+        )
+    
+    db.commit()
+
+    return {'success': True}
 
 
 # Delete seller
-@app.route('/api/delete_seller', methods=['DELETE'])
-def delete_seller():
-    pass
+@app.route('/api/delete_seller/<seller_username>', methods=['DELETE'])
+def delete_seller(seller_username: str):
+    db = get_db()
+    result = db.execute('DELETE FROM Sellers WHERE username = ?', [seller_username])
+    db.commit()
+
+    if result.rowcount == 0:
+        return {'error': 'Seller not found'}, 404
+    
+    return {'success': True}
+
+
+# Get all of a seller's listings
+@app.route('/api/get_seller_listings/<seller_username>', methods=['GET'])
+def get_seller_listings(seller_username: str):
+    db = get_db()
+    listings = db.execute('SELECT * FROM Listings WHERE seller_username = ?', [seller_username])
+    return jsonify([dict(listing) for listing in listings])
 
 
 @app.route('/api/get_listing/<int:listing_id>', methods=['GET'])
@@ -136,9 +192,13 @@ def add_or_update_listing():
 @app.route('/api/delete_listing/<int:listing_id>', methods=['DELETE'])
 def delete_listing(listing_id: int):
     db = get_db()
-    db.execute('DELETE FROM Listings WHERE listing_id = ?', [listing_id])
+    result = db.execute('DELETE FROM Listings WHERE listing_id = ?', [listing_id])
     db.commit()
-    return jsonify({'success': True})
+
+    if result.rowcount == 0:
+        return {'error': 'Listing not found'}, 404
+    
+    return {'success': True}
 
 
 @app.route('/api/get_browse_page/<int:page_number>')
