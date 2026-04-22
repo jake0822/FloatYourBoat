@@ -70,6 +70,10 @@
           <label for="reg-username">Username</label>
           <input type="text" id="reg-username" placeholder="Choose a username" autocomplete="username" required />
         </div>
+        <div class="form-group" id="reg-location-group">
+          <label for="reg-location">Your Location</label>
+          <input type="text" id="reg-location" placeholder="City, State" required />
+        </div>
         <button type="submit" class="btn btn-primary btn-block btn-lg">Create Account</button>
       </form>
     </div>
@@ -97,6 +101,12 @@
       document.getElementById('reg-role').value = role;
       document.getElementById('role-buyer').classList.toggle('selected', role === 'buyer');
       document.getElementById('role-seller').classList.toggle('selected', role === 'seller');
+      const locationGroup = document.getElementById('reg-location-group');
+      const locationInput = document.getElementById('reg-location');
+      const isBuyer = role === 'buyer';
+      locationGroup.classList.toggle('hidden', !isBuyer);
+      locationInput.required = isBuyer;
+      if (!isBuyer) locationInput.value = '';
     }
 
     function showAlert(msg, type = 'danger') {
@@ -126,13 +136,16 @@
       const email    = document.getElementById('reg-email').value;
       const username = document.getElementById('reg-username').value;
       const role     = document.getElementById('reg-role').value;
-      const result = FYBAuth.register(username, name, email, role);
+      const location = document.getElementById('reg-location').value;
+      const result = FYBAuth.register(username, name, email, role, location);
       if (result.error) {
         showAlert(result.error);
       } else {
         window.location.href = '/';
       }
     }
+
+    selectRole('buyer');
   </script>
 </body>
 </html>

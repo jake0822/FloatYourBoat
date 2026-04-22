@@ -109,9 +109,23 @@
   }
 
   // ── Form: Submit ───────────────────────────────────────────────────────────
-  window.handleFormSubmit = function (e) {
+  window.handleFormSubmit = async function (e) {
     e.preventDefault();
     const user = FYBAuth.getCurrentUser();
+    const location = document.getElementById('form-location').value.trim();
+    let geocoded;
+
+    try {
+      geocoded = await FYB.geocodeLocation(location);
+    } catch {
+      showNotification('Map service is unavailable. Please try again.', 'danger');
+      return;
+    }
+
+    if (!geocoded) {
+      showNotification('Please enter a valid location (city/state).', 'warning');
+      return;
+    }
 
     const data = {
       sellerId:    user.id,
@@ -121,7 +135,7 @@
       year:        parseInt(document.getElementById('form-year').value),
       length:      parseFloat(document.getElementById('form-length').value),
       price:       parseFloat(document.getElementById('form-price').value),
-      location:    document.getElementById('form-location').value.trim(),
+      location,
       engine:      document.getElementById('form-engine').value.trim(),
       hours:       document.getElementById('form-hours').value !== ''
                      ? parseFloat(document.getElementById('form-hours').value)
@@ -129,9 +143,8 @@
       condition:   document.getElementById('form-condition').value,
       description: document.getElementById('form-description').value.trim(),
       imageEmoji:  document.getElementById('form-image-emoji').value.trim() || '🚤',
-      // Default coordinates to Tallahassee, FL when not geocoding
-      lat: 30.4383,
-      lng: -84.2807,
+      lat: geocoded.lat,
+      lng: geocoded.lng,
     };
 
     if (editingId) {
