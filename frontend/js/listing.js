@@ -152,17 +152,23 @@
     const listing = FYB.getListingById(listingId);
     if (!listing) return;
     const seller = FYB.getUserById(listing.sellerId);
+    if (!seller) {
+      showNotification('Unable to find seller information for this listing.', 'danger');
+      return;
+    }
     const sellerEmail = seller?.email?.trim();
     if (!sellerEmail) {
       showNotification('Seller email is not available for this listing.', 'danger');
       return;
     }
+    const encodedSellerEmail = encodeURIComponent(sellerEmail);
+    const safeSellerEmail = FYBAuth.escapeHtml(sellerEmail);
 
     const subject = encodeURIComponent(`FloatYourBoat inquiry: ${listing.title}`);
     const body = encodeURIComponent(
       `Hi ${listing.sellerName},\n\nI’m interested in your listing "${listing.title}" on FloatYourBoat. Is it still available?\n\nThanks,`
     );
-    const mailtoLink = `mailto:${sellerEmail}?subject=${subject}&body=${body}`;
+    const mailtoLink = `mailto:${encodedSellerEmail}?subject=${subject}&body=${body}`;
 
     showModal(
       'Contact Seller',
@@ -170,7 +176,7 @@
        <p style="margin:0.75rem 0; font-weight:600;">"${FYBAuth.escapeHtml(listing.title)}"</p>
        <p>Email the seller at:</p>
        <p style="margin-top:0.5rem;">
-         <a href="mailto:${sellerEmail}">${FYBAuth.escapeHtml(sellerEmail)}</a>
+         <a href="mailto:${encodedSellerEmail}">${safeSellerEmail}</a>
        </p>
        <p style="margin-top:0.75rem; color:var(--mid-gray);">Use the button below to open your default email app with a pre-filled message.</p>`,
       () => {
