@@ -53,7 +53,7 @@
           <a href="seller.html?edit=${listing.id}" class="btn btn-primary">✏️ Edit Listing</a>`;
       }
     } else {
-      actionBtns = `<a href="index.html" class="btn btn-primary">Login to Save or Contact</a>`;
+      actionBtns = `<a href="login" class="btn btn-primary">Login to Save or Contact</a>`;
     }
 
     container.innerHTML = `
@@ -136,7 +136,7 @@
 
   window.handleSave = function (listingId) {
     const user = FYBAuth.getCurrentUser();
-    if (!user) { window.location.href = 'index.html'; return; }
+    if (!user) { window.location.href = 'login'; return; }
     const saved = FYB.isListingSaved(user.id, listingId);
     if (saved) {
       FYB.unsaveListing(user.id, listingId);
