@@ -134,20 +134,37 @@
   }
 
   function renderStateOptions(stateSelect) {
-    const stateOptions = Object.entries(BUYER_LOCATIONS)
-      .map(([code, state]) => `<option value="${code}">${state.label}</option>`)
-      .join('');
-    stateSelect.innerHTML = `<option value="">Select state</option>${stateOptions}`;
+    stateSelect.replaceChildren();
+    const placeholder = document.createElement('option');
+    placeholder.value = '';
+    placeholder.textContent = 'Select state';
+    stateSelect.appendChild(placeholder);
+
+    for (const [code, state] of Object.entries(BUYER_LOCATIONS)) {
+      const option = document.createElement('option');
+      option.value = code;
+      option.textContent = state.label;
+      stateSelect.appendChild(option);
+    }
   }
 
   function renderCityOptions(citySelect, stateCode, selectedCity = '') {
     const state = BUYER_LOCATIONS[stateCode];
-    const options = state
-      ? state.cities
-          .map(c => `<option value="${c.name}">${c.name}</option>`)
-          .join('')
-      : '';
-    citySelect.innerHTML = `<option value="">Select city</option>${options}`;
+    citySelect.replaceChildren();
+    const placeholder = document.createElement('option');
+    placeholder.value = '';
+    placeholder.textContent = 'Select city';
+    citySelect.appendChild(placeholder);
+
+    if (state) {
+      for (const city of state.cities) {
+        const option = document.createElement('option');
+        option.value = city.name;
+        option.textContent = city.name;
+        citySelect.appendChild(option);
+      }
+    }
+
     citySelect.disabled = !state;
     if (selectedCity && state?.cities.some(c => c.name === selectedCity)) {
       citySelect.value = selectedCity;
