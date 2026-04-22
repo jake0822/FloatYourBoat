@@ -151,21 +151,34 @@
   window.handleContact = function (listingId) {
     const listing = FYB.getListingById(listingId);
     if (!listing) return;
+    const seller = FYB.getUserById(listing.sellerId);
+    const sellerEmail = seller?.email?.trim();
+    if (!sellerEmail) {
+      showNotification('Seller email is not available for this listing.', 'danger');
+      return;
+    }
+
+    const subject = encodeURIComponent(`FloatYourBoat inquiry: ${listing.title}`);
+    const body = encodeURIComponent(
+      `Hi ${listing.sellerName},\n\nI’m interested in your listing "${listing.title}" on FloatYourBoat. Is it still available?\n\nThanks,`
+    );
+    const mailtoLink = `mailto:${sellerEmail}?subject=${subject}&body=${body}`;
+
     showModal(
       'Contact Seller',
       `<p>You are contacting <strong>${FYBAuth.escapeHtml(listing.sellerName)}</strong> about:</p>
        <p style="margin:0.75rem 0; font-weight:600;">"${FYBAuth.escapeHtml(listing.title)}"</p>
-       <div class="form-group">
-         <label for="contact-msg">Your Message</label>
-         <textarea id="contact-msg" placeholder="Hi, I am interested in your listing…" rows="5"></textarea>
-       </div>`,
+       <p>Email the seller at:</p>
+       <p style="margin-top:0.5rem;">
+         <a href="mailto:${sellerEmail}">${FYBAuth.escapeHtml(sellerEmail)}</a>
+       </p>
+       <p style="margin-top:0.75rem; color:var(--mid-gray);">Use the button below to open your default email app with a pre-filled message.</p>`,
       () => {
-        const msg = document.getElementById('contact-msg').value.trim();
-        if (!msg) { showNotification('Please enter a message.', 'danger'); return false; }
         closeModal();
-        showNotification('✅ Message sent! The seller will be in touch.', 'success');
+        window.location.href = mailtoLink;
         return true;
-      }
+      },
+      'Open Email App'
     );
   };
 
@@ -191,10 +204,12 @@
     setTimeout(() => div.remove(), 8000);
   }
 
-  function showModal(title, bodyHtml, onConfirm) {
+  function showModal(title, bodyHtml, onConfirm, confirmLabel = 'Confirm') {
     document.getElementById('modal-title').textContent = title;
     document.getElementById('modal-body').innerHTML = bodyHtml;
-    document.getElementById('modal-confirm').onclick = onConfirm;
+    const confirmBtn = document.getElementById('modal-confirm');
+    confirmBtn.textContent = confirmLabel;
+    confirmBtn.onclick = onConfirm;
     document.getElementById('modal-overlay').classList.remove('hidden');
   }
 
