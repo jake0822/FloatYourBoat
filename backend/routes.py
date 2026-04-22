@@ -18,9 +18,9 @@ def login():
 
 
 # View listing page
-@app.route('/listing/<listing_id>', methods=['GET'])
-def view_listing(listing_id: str):
-    return 'TODO'
+@app.route('/listing', methods=['GET'])
+def view_listing():
+    return render_template('listing.html')
 
 
 # Create or edit listing page
@@ -50,7 +50,6 @@ def get_css_file(file_path: str):
     
     with open(full_path, 'r', encoding='utf-8') as f:
         return Response(f.read(), 200, mimetype='text/css')
-
 
 
 @app.route('/js/<file_path>', methods=['GET'])
