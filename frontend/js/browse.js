@@ -181,7 +181,7 @@
               <span class="stat-item"><span class="stat-icon">🔖</span> ${saveCount} saved</span>
             </div>
             <div class="flex flex-gap mt-2">
-              <a href="listing/${l.id}" class="btn btn-primary btn-sm">View Details</a>
+              <a href="listing?id=${l.id}" class="btn btn-primary btn-sm">View Details</a>
               ${user && user.role === 'buyer' && l.status === 'available' ? `
                 <button class="btn btn-sm ${isSaved ? 'btn-warning' : 'btn-outline'}"
                         onclick="toggleSave('${l.id}', this)">
