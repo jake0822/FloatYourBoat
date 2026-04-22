@@ -94,6 +94,9 @@ def get_listing(listing_id: int):
     db = get_db()
     listing = db.execute("SELECT * FROM Listings WHERE listing_id = ?", [listing_id]).fetchone()
 
+    if listing is None:
+        return jsonify({'error': 'Listing not found'})
+
     listing_dict = dict(listing)
     listing_dict['is_sold'] = bool(listing_dict['is_sold'])
 
@@ -119,9 +122,10 @@ def add_or_update_listing():
     else:
         # Update existing listing
         db.execute(
-            'UPDATE Listings SET name = ?, description = ?, location = ?, price = ?, date_listed = ?, is_sold = ?',
+            'UPDATE Listings SET name = ?, description = ?, location = ?, price = ?, date_listed = ?, is_sold = ?, seller_username = ? WHERE listing_id = ?',
             [listing['name'], listing['description'], listing['location'],
-             listing['price'], listing['date_listed'], int(listing['is_sold'], listing['seller_username'])]
+             listing['price'], listing['date_listed'], int(listing['is_sold']), listing['seller_username'],
+             listing_id]
         )
     
     db.commit()
@@ -129,6 +133,9 @@ def add_or_update_listing():
 
 
 # Delete listing
-@app.route('/api/delete_listing', methods=['DELETE'])
-def delete_listing():
-    pass
+@app.route('/api/delete_listing/<int:listing_id>', methods=['DELETE'])
+def delete_listing(listing_id: int):
+    db = get_db()
+    db.execute('DELETE FROM Listings WHERE listing_id = ?', [listing_id])
+    db.commit()
+    return jsonify({'success': True})
