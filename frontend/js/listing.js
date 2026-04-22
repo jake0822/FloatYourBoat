@@ -176,12 +176,12 @@
        <p style="margin:0.75rem 0; font-weight:600;">"${FYBAuth.escapeHtml(listing.title)}"</p>
        <p>Email the seller at:</p>
        <p style="margin-top:0.5rem;">
-         <a href="mailto:${encodedSellerEmail}">${safeSellerEmail}</a>
+         <a href="mailto:${encodedSellerEmail}" target="_blank" rel="noopener noreferrer">${safeSellerEmail}</a>
        </p>
        <p style="margin-top:0.75rem; color:var(--mid-gray);">Use the button below to open your default email app with a pre-filled message.</p>`,
       () => {
         closeModal();
-        window.location.href = mailtoLink;
+        window.open(mailtoLink, '_blank', 'noopener,noreferrer');
         return true;
       },
       'Open Email App'
