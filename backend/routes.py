@@ -139,3 +139,14 @@ def delete_listing(listing_id: int):
     db.execute('DELETE FROM Listings WHERE listing_id = ?', [listing_id])
     db.commit()
     return jsonify({'success': True})
+
+
+@app.route('/api/get_browse_page/<int:page_number>')
+def get_browse_page(page_number: int):
+    db = get_db()
+    offset = page_number * 10
+    listings = db.execute(
+        'SELECT * FROM listings ORDER BY listing_id DESC LIMIT 10 OFFSET ?',
+        [offset]
+    ).fetchall()
+    return jsonify([dict(listing) for listing in listings])
