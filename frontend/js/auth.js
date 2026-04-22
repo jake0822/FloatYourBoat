@@ -49,23 +49,19 @@ function requireSeller() {
 }
 
 // ── Login ──────────────────────────────────────────────────────────────────────
-function login(username, password) {
+function login(username) {
   const user = FYB.getUserByUsername(username.trim());
   if (!user) return { error: 'No account found with that username.' };
-  if (user.password !== password) return { error: 'Incorrect password.' };
   setCurrentUser(user);
   return { user };
 }
 
 // ── Register ───────────────────────────────────────────────────────────────────
-function register(username, password, name, email, role) {
-  if (!username || !password || !name || !email || !role) {
+function register(username, name, email, role) {
+  if (!username || !name || !email || !role) {
     return { error: 'All fields are required.' };
   }
-  if (password.length < 6) {
-    return { error: 'Password must be at least 6 characters.' };
-  }
-  const result = FYB.registerUser({ username: username.trim(), password, name: name.trim(), email: email.trim(), role });
+  const result = FYB.registerUser({ username: username.trim(), name: name.trim(), email: email.trim(), role });
   if (result.error) return result;
   setCurrentUser(result);
   return { user: result };
