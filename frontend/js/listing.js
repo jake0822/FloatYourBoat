@@ -54,7 +54,7 @@
       }
       if (user.id === listing.sellerId) {
         actionBtns += `
-          <a href="seller.html?edit=${listing.id}" class="btn btn-primary">✏️ Edit Listing</a>`;
+          <a href="seller?edit=${listing.id}" class="btn btn-primary">✏️ Edit Listing</a>`;
       }
     } else {
       actionBtns = `<a href="login" class="btn btn-primary">Login to Save or Contact</a>`;

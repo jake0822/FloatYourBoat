@@ -5,8 +5,8 @@
 (function () {
   const { FYB, FYBAuth } = window;
 
-  document.addEventListener('DOMContentLoaded', () => {
-    FYB.initData();
+  document.addEventListener('DOMContentLoaded', async () => {
+    await FYB.initData();
     FYBAuth.requireBuyer();
     FYBAuth.renderNav();
     renderSavedListings();
@@ -88,9 +88,9 @@
       </div>`;
   }
 
-  window.handleUnsave = function (listingId) {
+  window.handleUnsave = async function (listingId) {
     const user = FYBAuth.getCurrentUser();
-    FYB.unsaveListing(user.id, listingId);
+    await FYB.unsaveListing(user.id, listingId);
     renderSavedListings();
     showNotification('Listing removed from your saved list.', 'info');
   };

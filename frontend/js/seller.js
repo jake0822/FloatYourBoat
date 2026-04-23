@@ -210,10 +210,10 @@
     };
 
     if (editingId) {
-      FYB.updateListing(editingId, data);
+      await FYB.updateListing(editingId, data);
       showNotification('✅ Listing updated successfully.', 'success');
     } else {
-      FYB.addListing(data);
+      await FYB.addListing(data);
       showNotification('✅ Listing created successfully.', 'success');
     }
 
@@ -228,23 +228,23 @@
   };
 
   // ── Mark Sold / Re-list ────────────────────────────────────────────────────
-  window.handleMarkSold = function (id) {
+  window.handleMarkSold = async function (id) {
     if (!confirm('Mark this listing as sold?')) return;
-    FYB.updateListing(id, { status: 'sold' });
+    await FYB.updateListing(id, { status: 'sold' });
     renderMyListings();
     showNotification('Listing marked as sold.', 'info');
   };
 
-  window.handleMarkAvailable = function (id) {
-    FYB.updateListing(id, { status: 'available' });
+  window.handleMarkAvailable = async function (id) {
+    await FYB.updateListing(id, { status: 'available' });
     renderMyListings();
     showNotification('Listing re-listed as available.', 'success');
   };
 
   // ── Delete ─────────────────────────────────────────────────────────────────
-  window.handleDelete = function (id) {
+  window.handleDelete = async function (id) {
     if (!confirm('Are you sure you want to permanently delete this listing?')) return;
-    FYB.deleteListing(id);
+    await FYB.deleteListing(id);
     renderMyListings();
     showNotification('Listing deleted.', 'danger');
   };

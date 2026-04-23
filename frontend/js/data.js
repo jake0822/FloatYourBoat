@@ -117,6 +117,23 @@ async function loadListings() {
     page += 1;
   }
 
+  // Seed seller stubs for any DB seller not yet in local cache so they can log in.
+  for (const raw of all) {
+    const sellerKey = (raw.seller_username || '').trim();
+    if (sellerKey && !usersByUsername.has(sellerKey)) {
+      const stub = {
+        id: sellerKey,
+        username: sellerKey,
+        role: 'seller',
+        name: sellerKey,
+        email: '',
+        location: '',
+      };
+      usersCache.push(stub);
+      usersByUsername.set(sellerKey, stub);
+    }
+  }
+
   listingsCache = all.map(mapListingFromApi);
   return listingsCache;
 }
@@ -163,6 +180,7 @@ async function initData() {
     rebuildUserLookup();
     await loadCities();
     await loadListings();
+    // Persist seeded seller stubs back to local storage.
     setUsersStore(usersCache);
   })().catch(err => {
     console.error('Failed to initialize app data:', err);

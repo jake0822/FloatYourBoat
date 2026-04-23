@@ -260,7 +260,7 @@
     const POPULAR_THRESHOLD = 2;
     const popularSaved = results.filter(l =>
       FYB.getSaveCount(l) >= POPULAR_THRESHOLD &&
-      l.savedBy.includes(user.id)
+      FYB.isListingSaved(user.id, l.id)
     );
 
     if (popularSaved.length > 0 && !popularityAlertShown) {
@@ -294,7 +294,7 @@
       const isSaved = user && FYB.isListingSaved(user.id, l.id);
       const saveCount = FYB.getSaveCount(l);
       const isPopular = saveCount >= 2;
-      const dist = (user && userLat !== null)
+      const dist = (user && userLat !== null && Number.isFinite(l.lat) && Number.isFinite(l.lng))
         ? Math.round(FYB.haversineDistance(userLat, userLng, l.lat, l.lng))
         : null;
 
