@@ -10,11 +10,10 @@
   let userLat = null;
   let userLng = null;
   let popularityAlertShown = false;
-  const BUYER_LOCATIONS = FYB.BUYER_LOCATIONS || {};
 
   // ── Init ───────────────────────────────────────────────────────────────────
-  document.addEventListener('DOMContentLoaded', () => {
-    FYB.initData();
+  document.addEventListener('DOMContentLoaded', async () => {
+    await FYB.initData();
     FYBAuth.renderNav();
     allListings = FYB.getListings().filter(l => l.status === 'available');
     setupBuyerLocationSelectors();
@@ -124,7 +123,7 @@
     placeholder.textContent = 'Select state';
     stateSelect.appendChild(placeholder);
 
-    for (const [code, state] of Object.entries(BUYER_LOCATIONS)) {
+    for (const [code, state] of Object.entries(FYB.BUYER_LOCATIONS)) {
       const option = document.createElement('option');
       option.value = code;
       option.textContent = state.label;
@@ -133,7 +132,7 @@
   }
 
   function renderCityOptions(citySelect, stateCode, selectedCity = '') {
-    const state = BUYER_LOCATIONS[stateCode];
+    const state = FYB.BUYER_LOCATIONS[stateCode];
     citySelect.replaceChildren();
     const placeholder = document.createElement('option');
     placeholder.value = '';
@@ -161,7 +160,7 @@
   }
 
   function findCity(stateCode, cityName) {
-    const state = BUYER_LOCATIONS[stateCode];
+    const state = FYB.BUYER_LOCATIONS[stateCode];
     if (!state) return null;
     return state.cities.find(c => c.name === cityName) || null;
   }
@@ -180,7 +179,7 @@
   function normalizeStateCode(stateText) {
     const normalized = (stateText || '').trim().toLowerCase();
     if (!normalized) return null;
-    for (const [stateCode, state] of Object.entries(BUYER_LOCATIONS)) {
+    for (const [stateCode, state] of Object.entries(FYB.BUYER_LOCATIONS)) {
       if (normalized === stateCode.toLowerCase() || normalized === state.label.toLowerCase()) {
         return stateCode;
       }

@@ -2,6 +2,8 @@ from app import app, FRONTEND_PATH
 from flask import render_template, Response
 import os
 
+DATA_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data')
+
 
 # -- Page routes --
 
@@ -63,6 +65,16 @@ def get_js_file(file_path: str):
 
 
 # -- API routes --
+
+# City data for state/city dropdowns
+@app.route('/api/cities', methods=['GET'])
+def get_cities():
+    full_path = os.path.join(DATA_PATH, 'us_cities.json')
+    if not os.path.isfile(full_path):
+        return 'City data not found', 404
+    with open(full_path, 'r', encoding='utf-8') as f:
+        return Response(f.read(), 200, mimetype='application/json')
+
 
 # Add or update buyer
 @app.route('/api/add_or_update_buyer', methods=['POST', 'PUT'])
