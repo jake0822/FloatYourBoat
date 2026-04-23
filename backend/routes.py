@@ -246,3 +246,38 @@ def get_browse_page(page_number: int):
         [offset]
     ).fetchall()
     return jsonify([dict(listing) for listing in listings])
+
+
+@app.route('/api/save_listing', methods=['POST'])
+def save_listing():
+    data: dict = request.json
+    db = get_db()
+
+    row_exists = db.execute('SELECT EXISTS(SELECT 1 FROM Saved_Listings WHERE buyer_username = ? AND listing_id = ?)',
+                        [data['buyer_username'], data['listing_id']]
+    ).fetchone()[0]
+    
+    if not row_exists:
+        db.execute('INSERT INTO Saved_Listings (buyer_username, listing_id) VALUES (?, ?)',
+                [data['buyer_username'], data['listing_id']]
+        )
+        db.commit()
+        return {'success': True}
+
+    return {'error': 'Listing is already saved'}, 409
+
+
+@app.route('/api/unsave_listing', methods=['POST'])
+def unsave_listing():
+    data: dict = request.json
+    db = get_db()
+
+    result = db.execute('DELETE FROM Saved_Listings WHERE buyer_username = ? AND listing_id = ?',
+                        [data['buyer_username'], data['listing_id']]
+    )
+    db.commit()
+
+    if result.rowcount == 0:
+        return {'error': 'Not found'}, 404
+    
+    return {'success': True}
