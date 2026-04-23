@@ -83,7 +83,7 @@
       if (sortSelect.value === 'proximity') {
         const ready = ensureBuyerLocation();
         if (!ready) {
-          sortSelect.value = 'newest';
+          sortSelect.value = 'price-asc';
         }
       }
       applyFilters();
@@ -193,7 +193,7 @@
     const type     = document.getElementById('type')?.value || '';
     const minPrice = parseFloat(document.getElementById('min-price')?.value) || 0;
     const maxPrice = parseFloat(document.getElementById('max-price')?.value) || Infinity;
-    const sort     = document.getElementById('sort')?.value || 'newest';
+    const sort     = document.getElementById('sort')?.value || 'price-asc';
     const showSold = document.getElementById('show-sold')?.checked || false;
 
     let results = FYB.getListings();
@@ -219,12 +219,6 @@
 
     // Sort
     switch (sort) {
-      case 'newest':
-        results.sort((a, b) => new Date(b.datePosted) - new Date(a.datePosted));
-        break;
-      case 'oldest':
-        results.sort((a, b) => new Date(a.datePosted) - new Date(b.datePosted));
-        break;
       case 'price-asc':
         results.sort((a, b) => a.price - b.price);
         break;
@@ -373,7 +367,7 @@
     document.getElementById('type').value = '';
     document.getElementById('min-price').value = '';
     document.getElementById('max-price').value = '';
-    document.getElementById('sort').value = 'newest';
+    document.getElementById('sort').value = 'price-asc';
     document.getElementById('show-sold').checked = false;
     applyFilters();
   };
