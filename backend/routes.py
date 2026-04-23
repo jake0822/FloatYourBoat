@@ -67,41 +67,6 @@ def get_js_file(file_path: str):
 
 # -- API routes --
 
-# Get all users (buyers + sellers)
-@app.route('/api/get_all_users', methods=['GET'])
-def get_all_users():
-    db = get_db()
-    buyers = db.execute(
-        "SELECT username, name, location FROM Buyers"
-    ).fetchall()
-    sellers = db.execute(
-        "SELECT username, name, email FROM Sellers"
-    ).fetchall()
-
-    users = []
-    for buyer in buyers:
-        users.append({
-            'id': buyer['username'],
-            'username': buyer['username'],
-            'role': 'buyer',
-            'name': buyer['name'],
-            'email': '',
-            'location': buyer['location'] or '',
-        })
-
-    for seller in sellers:
-        users.append({
-            'id': seller['username'],
-            'username': seller['username'],
-            'role': 'seller',
-            'name': seller['name'],
-            'email': seller['email'] or '',
-            'location': '',
-        })
-
-    return jsonify(users)
-
-
 # City data for state/city dropdowns
 @app.route('/api/cities', methods=['GET'])
 def get_cities():
@@ -188,41 +153,14 @@ def delete_seller(seller_username: str):
 @app.route('/api/get_seller_listings/<seller_username>', methods=['GET'])
 def get_seller_listings(seller_username: str):
     db = get_db()
-    listings = db.execute(
-        '''
-        SELECT
-            l.*,
-            s.name AS seller_name,
-            COALESCE(COUNT(sl.buyer_username), 0) AS save_count
-        FROM Listings l
-        LEFT JOIN Sellers s ON LOWER(s.username) = LOWER(l.seller_username)
-        LEFT JOIN Saved_Listings sl ON sl.listing_id = l.listing_id
-        WHERE LOWER(l.seller_username) = LOWER(?)
-        GROUP BY l.listing_id
-        ORDER BY l.listing_id DESC
-        ''',
-        [seller_username]
-    )
+    listings = db.execute('SELECT * FROM Listings WHERE seller_username = ?', [seller_username])
     return jsonify([dict(listing) for listing in listings])
 
 
 @app.route('/api/get_listing/<int:listing_id>', methods=['GET'])
 def get_listing(listing_id: int):
     db = get_db()
-    listing = db.execute(
-        '''
-        SELECT
-            l.*,
-            s.name AS seller_name,
-            COALESCE(COUNT(sl.buyer_username), 0) AS save_count
-        FROM Listings l
-        LEFT JOIN Sellers s ON LOWER(s.username) = LOWER(l.seller_username)
-        LEFT JOIN Saved_Listings sl ON sl.listing_id = l.listing_id
-        WHERE l.listing_id = ?
-        GROUP BY l.listing_id
-        ''',
-        [listing_id]
-    ).fetchone()
+    listing = db.execute("SELECT * FROM Listings WHERE listing_id = ?", [listing_id]).fetchone()
 
     if listing is None:
         return jsonify({'error': 'Listing not found'})
@@ -280,57 +218,7 @@ def get_browse_page(page_number: int):
     db = get_db()
     offset = page_number * 10
     listings = db.execute(
-        '''
-        SELECT
-            l.*,
-            s.name AS seller_name,
-            COALESCE(COUNT(sl.buyer_username), 0) AS save_count
-        FROM Listings l
-        LEFT JOIN Sellers s ON LOWER(s.username) = LOWER(l.seller_username)
-        LEFT JOIN Saved_Listings sl ON sl.listing_id = l.listing_id
-        GROUP BY l.listing_id
-        ORDER BY l.listing_id DESC
-        LIMIT 10 OFFSET ?
-        ''',
+        'SELECT * FROM listings ORDER BY listing_id DESC LIMIT 10 OFFSET ?',
         [offset]
     ).fetchall()
     return jsonify([dict(listing) for listing in listings])
-
-
-@app.route('/api/get_saved_listing_ids/<buyer_username>', methods=['GET'])
-def get_saved_listing_ids(buyer_username: str):
-    db = get_db()
-    rows = db.execute(
-        "SELECT listing_id FROM Saved_Listings WHERE buyer_username = ?",
-        [buyer_username]
-    ).fetchall()
-    return jsonify([row['listing_id'] for row in rows])
-
-
-@app.route('/api/save_listing', methods=['POST'])
-def save_listing():
-    payload: dict = request.json or {}
-    buyer_username = payload.get('buyer_username')
-    listing_id = payload.get('listing_id')
-
-    if not buyer_username or listing_id is None:
-        return {'error': 'buyer_username and listing_id are required'}, 400
-
-    db = get_db()
-    db.execute(
-        "INSERT OR IGNORE INTO Saved_Listings (buyer_username, listing_id) VALUES (?, ?)",
-        [buyer_username, int(listing_id)]
-    )
-    db.commit()
-    return {'success': True}
-
-
-@app.route('/api/unsave_listing/<buyer_username>/<int:listing_id>', methods=['DELETE'])
-def unsave_listing(buyer_username: str, listing_id: int):
-    db = get_db()
-    db.execute(
-        "DELETE FROM Saved_Listings WHERE buyer_username = ? AND listing_id = ?",
-        [buyer_username, listing_id]
-    )
-    db.commit()
-    return {'success': True}

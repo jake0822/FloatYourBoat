@@ -1,9 +1,11 @@
 /**
  * data.js — FloatYourBoat Data Layer
- * API-backed data access and lightweight client-side cache.
+ * Uses backend APIs for listings/cities and local storage for user/session extras.
  */
 
 const KEYS = {
+  USERS: 'fyb_users',
+  SAVED_LISTINGS: 'fyb_saved_listings',
   CURRENT_USER: 'fyb_current_user',
   GEO_CACHE: 'fyb_geo_cache',
 };
@@ -14,7 +16,6 @@ let _initPromise = null;
 
 let usersCache = [];
 let listingsCache = [];
-const savedListingIdsByUser = new Map();
 
 function loadCities() {
   if (_citiesPromise) return _citiesPromise;
@@ -45,14 +46,7 @@ async function apiJson(url, options = {}) {
   });
 
   if (!res.ok) {
-    let details = `HTTP ${res.status}`;
-    try {
-      const body = await res.json();
-      details = body?.error || details;
-    } catch {
-      // ignore
-    }
-    throw new Error(details);
+    throw new Error(`HTTP ${res.status}`);
   }
 
   const contentType = res.headers.get('content-type') || '';
@@ -69,9 +63,21 @@ function parsePrice(value) {
   return Number.isFinite(parsed) ? parsed : 0;
 }
 
+function normalizeDate(value) {
+  const raw = String(value || '').trim();
+  if (!raw) return new Date().toISOString().split('T')[0];
+  if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) return raw;
+  const parsed = new Date(raw);
+  if (!Number.isNaN(parsed.getTime())) {
+    return parsed.toISOString().split('T')[0];
+  }
+  return new Date().toISOString().split('T')[0];
+}
+
 function mapListingFromApi(raw) {
   const id = String(raw?.listing_id ?? '');
-  const isSold = Boolean(raw?.is_sold);
+  const sellerUsername = raw?.seller_username || '';
+  const seller = usersCache.find(u => u.username === sellerUsername);
   return {
     id,
     title: raw?.name || 'Untitled Listing',
@@ -79,10 +85,9 @@ function mapListingFromApi(raw) {
     location: raw?.location || '',
     price: parsePrice(raw?.price),
     datePosted: raw?.date_listed || '',
-    status: isSold ? 'sold' : 'available',
-    sellerId: raw?.seller_username || '',
-    sellerName: raw?.seller_name || raw?.seller_username || 'Unknown Seller',
-    saveCount: Number(raw?.save_count || 0),
+    status: raw?.is_sold ? 'sold' : 'available',
+    sellerId: sellerUsername,
+    sellerName: seller?.name || sellerUsername || 'Unknown Seller',
     type: 'Boat',
     year: 'N/A',
     length: 'N/A',
@@ -93,11 +98,6 @@ function mapListingFromApi(raw) {
   };
 }
 
-async function loadUsers() {
-  usersCache = await apiJson('/api/get_all_users');
-  return usersCache;
-}
-
 async function loadListings() {
   const all = [];
   let page = 0;
@@ -105,45 +105,53 @@ async function loadListings() {
   while (true) {
     const batch = await apiJson(`/api/get_browse_page/${page}`);
     if (!Array.isArray(batch) || batch.length === 0) break;
-    all.push(...batch.map(mapListingFromApi));
+    all.push(...batch);
     if (batch.length < 10) break;
     page += 1;
   }
 
-  listingsCache = all;
+  listingsCache = all.map(mapListingFromApi);
   return listingsCache;
 }
 
-async function ensureSavedListingIdsLoaded(userId) {
-  const id = String(userId || '').trim();
-  if (!id) return new Set();
-  if (savedListingIdsByUser.has(id)) return savedListingIdsByUser.get(id);
+function getSavedStore() {
+  try {
+    return JSON.parse(localStorage.getItem(KEYS.SAVED_LISTINGS)) || {};
+  } catch {
+    return {};
+  }
+}
 
-  const listingIds = await apiJson(`/api/get_saved_listing_ids/${encodeURIComponent(id)}`);
-  const set = new Set((listingIds || []).map(v => String(v)));
-  savedListingIdsByUser.set(id, set);
-  return set;
+function setSavedStore(store) {
+  localStorage.setItem(KEYS.SAVED_LISTINGS, JSON.stringify(store));
+}
+
+function getUsersStore() {
+  try {
+    return JSON.parse(localStorage.getItem(KEYS.USERS)) || [];
+  } catch {
+    return [];
+  }
+}
+
+function setUsersStore(users) {
+  localStorage.setItem(KEYS.USERS, JSON.stringify(users));
+}
+
+function ensureSavedListingIdsLoaded() {
+  return Promise.resolve();
 }
 
 async function initData() {
   if (_initPromise) return _initPromise;
-  _initPromise = Promise.all([loadCities(), loadUsers(), loadListings()])
-    .then(async () => {
-      const currentRaw = sessionStorage.getItem(KEYS.CURRENT_USER);
-      if (!currentRaw) return;
-      try {
-        const currentUser = JSON.parse(currentRaw);
-        if (currentUser?.role === 'buyer' && currentUser?.id) {
-          await ensureSavedListingIdsLoaded(currentUser.id);
-        }
-      } catch {
-        // ignore bad session payload
-      }
-    })
-    .catch(err => {
-      console.error('Failed to initialize app data:', err);
-    });
-
+  _initPromise = (async () => {
+    usersCache = getUsersStore();
+    await loadCities();
+    await loadListings();
+    setUsersStore(usersCache);
+  })().catch(err => {
+    console.error('Failed to initialize app data:', err);
+  });
   return _initPromise;
 }
 
@@ -169,7 +177,7 @@ async function addListing(listing) {
     price: Number(listing?.price || 0),
     date_listed: new Date().toISOString().split('T')[0],
     is_sold: false,
-    seller_username: listing?.sellerId || listing?.seller_username || '',
+    seller_username: listing?.sellerId || '',
   };
 
   await apiJson('/api/add_or_update_listing', {
@@ -192,7 +200,7 @@ async function updateListing(id, updates) {
     description: next.description || '',
     location: next.location || '',
     price: Number(next.price || 0),
-    date_listed: next.datePosted || new Date().toISOString().split('T')[0],
+    date_listed: normalizeDate(next.datePosted),
     is_sold: (next.status || 'available') === 'sold',
     seller_username: next.sellerId || '',
   };
@@ -222,16 +230,7 @@ function getUsers() {
 
 function saveUsers(users) {
   usersCache = Array.isArray(users) ? users.slice() : [];
-}
-
-function upsertUserLocal(user) {
-  const idx = usersCache.findIndex(u => u.username === user.username);
-  if (idx === -1) {
-    usersCache.push(user);
-    return user;
-  }
-  usersCache[idx] = { ...usersCache[idx], ...user };
-  return usersCache[idx];
+  setUsersStore(usersCache);
 }
 
 function updateUser(id, updates) {
@@ -241,6 +240,7 @@ function updateUser(id, updates) {
 
   const updated = { ...usersCache[idx], ...updates };
   usersCache[idx] = updated;
+  setUsersStore(usersCache);
 
   const endpoint = updated.role === 'buyer' ? '/api/add_or_update_buyer' : '/api/add_or_update_seller';
   const payload = updated.role === 'buyer'
@@ -280,25 +280,6 @@ async function registerUser(user) {
     return { error: 'Username already taken.' };
   }
 
-  const isBuyer = user.role === 'buyer';
-  const endpoint = isBuyer ? '/api/add_or_update_buyer' : '/api/add_or_update_seller';
-  const payload = isBuyer
-    ? {
-        username: user.username,
-        name: user.name,
-        location: user.location || '',
-      }
-    : {
-        username: user.username,
-        name: user.name,
-        email: user.email || '',
-      };
-
-  await apiJson(endpoint, {
-    method: 'POST',
-    body: JSON.stringify(payload),
-  });
-
   const created = {
     id: user.username,
     username: user.username,
@@ -308,13 +289,46 @@ async function registerUser(user) {
     location: user.location || '',
   };
 
-  upsertUserLocal(created);
+  usersCache.push(created);
+  setUsersStore(usersCache);
+
+  const endpoint = created.role === 'buyer' ? '/api/add_or_update_buyer' : '/api/add_or_update_seller';
+  const payload = created.role === 'buyer'
+    ? {
+        username: created.username,
+        name: created.name,
+        location: created.location,
+      }
+    : {
+        username: created.username,
+        name: created.name,
+        email: created.email,
+      };
+
+  try {
+    await apiJson(endpoint, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  } catch (err) {
+    console.error('Backend registration failed:', err);
+  }
+
   return created;
 }
 
 function getSavedListingIds(userId) {
-  const set = savedListingIdsByUser.get(String(userId || '')) || new Set();
-  return Array.from(set);
+  const store = getSavedStore();
+  return store[String(userId || '')] || [];
+}
+
+function getSaveCountByListingId(listingId) {
+  const key = String(listingId || '');
+  if (!key) return 0;
+  const store = getSavedStore();
+  return Object.values(store).reduce((count, ids) => {
+    return count + (Array.isArray(ids) && ids.includes(key) ? 1 : 0);
+  }, 0);
 }
 
 async function saveListing(userId, listingId) {
@@ -322,61 +336,30 @@ async function saveListing(userId, listingId) {
   const listingKey = String(listingId || '');
   if (!userKey || !listingKey) return;
 
-  const set = await ensureSavedListingIdsLoaded(userKey);
-  if (set.has(listingKey)) return;
-
-  set.add(listingKey);
-  const listing = getListingById(listingKey);
-  if (listing) listing.saveCount = Number(listing.saveCount || 0) + 1;
-
-  try {
-    await apiJson('/api/save_listing', {
-      method: 'POST',
-      body: JSON.stringify({
-        buyer_username: userKey,
-        listing_id: Number(listingKey),
-      }),
-    });
-  } catch (err) {
-    set.delete(listingKey);
-    if (listing) listing.saveCount = Math.max(0, Number(listing.saveCount || 0) - 1);
-    throw err;
-  }
+  const store = getSavedStore();
+  const ids = new Set(store[userKey] || []);
+  ids.add(listingKey);
+  store[userKey] = Array.from(ids);
+  setSavedStore(store);
 }
 
 async function unsaveListing(userId, listingId) {
   const userKey = String(userId || '');
   const listingKey = String(listingId || '');
-  if (!userKey || !listingKey) return;
-
-  const set = await ensureSavedListingIdsLoaded(userKey);
-  if (!set.has(listingKey)) return;
-
-  set.delete(listingKey);
-  const listing = getListingById(listingKey);
-  if (listing) listing.saveCount = Math.max(0, Number(listing.saveCount || 0) - 1);
-
-  try {
-    await apiJson(`/api/unsave_listing/${encodeURIComponent(userKey)}/${Number(listingKey)}`, {
-      method: 'DELETE',
-    });
-  } catch (err) {
-    set.add(listingKey);
-    if (listing) listing.saveCount = Number(listing.saveCount || 0) + 1;
-    throw err;
-  }
+  const store = getSavedStore();
+  const ids = new Set(store[userKey] || []);
+  ids.delete(listingKey);
+  store[userKey] = Array.from(ids);
+  setSavedStore(store);
 }
 
 function isListingSaved(userId, listingId) {
-  const set = savedListingIdsByUser.get(String(userId || ''));
-  if (!set) return false;
-  return set.has(String(listingId || ''));
+  return getSavedListingIds(userId).includes(String(listingId || ''));
 }
 
 function getSavedListings(userId) {
-  const set = savedListingIdsByUser.get(String(userId || ''));
-  if (!set) return [];
-  return listingsCache.filter(l => set.has(String(l.id)));
+  const idSet = new Set(getSavedListingIds(userId));
+  return listingsCache.filter(l => idSet.has(String(l.id)));
 }
 
 function haversineDistance(lat1, lng1, lat2, lng2) {
@@ -408,7 +391,7 @@ function formatDate(dateStr) {
 }
 
 function getSaveCount(listing) {
-  return Number(listing?.saveCount || 0);
+  return getSaveCountByListingId(listing?.id);
 }
 
 function getGeoCache() {
