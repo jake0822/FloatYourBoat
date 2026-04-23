@@ -29,7 +29,8 @@ function loadCities() {
       BUYER_LOCATIONS = data;
       if (window.FYB) window.FYB.BUYER_LOCATIONS = data;
     })
-    .catch(() => {
+    .catch(err => {
+      console.error('Failed to load city data:', err);
       // BUYER_LOCATIONS stays as empty object; dropdowns will be empty
     });
   return _citiesPromise;
