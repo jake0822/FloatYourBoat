@@ -70,9 +70,19 @@
           <label for="reg-username">Username</label>
           <input type="text" id="reg-username" placeholder="Choose a username" autocomplete="username" required />
         </div>
-        <div class="form-group" id="reg-location-group">
-          <label for="reg-location">Your Location</label>
-          <input type="text" id="reg-location" placeholder="City, State" required />
+        <div class="form-row" id="reg-location-group">
+          <div class="form-group">
+            <label for="reg-state">Your State</label>
+            <select id="reg-state" required>
+              <option value="">Select state</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="reg-city">Your City (Or Closest One)</label>
+            <select id="reg-city" required disabled>
+              <option value="">Select city</option>
+            </select>
+          </div>
         </div>
         <button type="submit" class="btn btn-primary btn-block btn-lg">Create Account</button>
       </form>
@@ -82,11 +92,67 @@
   <script src="js/data.js"></script>
   <script src="js/auth.js"></script>
   <script>
-    FYB.initData();
+    document.addEventListener('DOMContentLoaded', async () => {
+      await FYB.initData();
+      setupRegistrationLocationSelectors();
 
-    // If already logged in, go to browse
-    if (FYBAuth.getCurrentUser()) {
-      window.location.href = '/';
+      // If already logged in, go to browse
+      if (FYBAuth.getCurrentUser()) {
+        window.location.href = '/';
+      }
+    });
+
+    function setupRegistrationLocationSelectors() {
+      const stateSelect = document.getElementById('reg-state');
+      const citySelect = document.getElementById('reg-city');
+      if (!stateSelect || !citySelect) return;
+
+      const locations = FYB.BUYER_LOCATIONS || {};
+      stateSelect.replaceChildren();
+      const statePlaceholder = document.createElement('option');
+      statePlaceholder.value = '';
+      statePlaceholder.textContent = 'Select state';
+      stateSelect.appendChild(statePlaceholder);
+
+      const sortedStates = Object.entries(locations).sort((a, b) => a[1].label.localeCompare(b[1].label));
+      for (const [code, state] of sortedStates) {
+        const option = document.createElement('option');
+        option.value = code;
+        option.textContent = state.label;
+        stateSelect.appendChild(option);
+      }
+
+      stateSelect.addEventListener('change', () => {
+        renderRegistrationCities(stateSelect.value);
+      });
+
+      renderRegistrationCities('');
+    }
+
+    function renderRegistrationCities(stateCode) {
+      const citySelect = document.getElementById('reg-city');
+      const state = (FYB.BUYER_LOCATIONS || {})[stateCode];
+      citySelect.replaceChildren();
+
+      const placeholder = document.createElement('option');
+      placeholder.value = '';
+      placeholder.textContent = 'Select city';
+      citySelect.appendChild(placeholder);
+
+      if (state) {
+        for (const city of state.cities) {
+          const option = document.createElement('option');
+          option.value = city.name;
+          option.textContent = city.name;
+          citySelect.appendChild(option);
+        }
+      }
+
+      citySelect.disabled = !state;
+    }
+
+    function formatBuyerLocation(cityName, stateCode) {
+      return `${cityName}, ${stateCode}`;
     }
 
     function switchTab(tab) {
@@ -102,11 +168,16 @@
       document.getElementById('role-buyer').classList.toggle('selected', role === 'buyer');
       document.getElementById('role-seller').classList.toggle('selected', role === 'seller');
       const locationGroup = document.getElementById('reg-location-group');
-      const locationInput = document.getElementById('reg-location');
+      const stateSelect = document.getElementById('reg-state');
+      const citySelect = document.getElementById('reg-city');
       const isBuyer = role === 'buyer';
       locationGroup.classList.toggle('hidden', !isBuyer);
-      locationInput.required = isBuyer;
-      if (!isBuyer) locationInput.value = '';
+      stateSelect.required = isBuyer;
+      citySelect.required = isBuyer;
+      if (!isBuyer) {
+        stateSelect.value = '';
+        renderRegistrationCities('');
+      }
     }
 
     function showAlert(msg, type = 'danger') {
@@ -136,19 +207,13 @@
       const email    = document.getElementById('reg-email').value;
       const username = document.getElementById('reg-username').value;
       const role     = document.getElementById('reg-role').value;
-      const location = document.getElementById('reg-location').value;
+      const stateCode = document.getElementById('reg-state').value;
+      const cityName = document.getElementById('reg-city').value;
+      const location = role === 'buyer' ? formatBuyerLocation(cityName, stateCode) : '';
 
       if (role === 'buyer') {
-        let geo;
-        try {
-          geo = await FYB.geocodeLocation(location);
-        } catch (err) {
-          console.error('Registration geocoding failed:', err);
-          showAlert(`Map service unavailable: ${err?.message || 'unknown error'}.`);
-          return;
-        }
-        if (!geo) {
-          showAlert('Invalid city/location. Please enter a valid city.');
+        if (!stateCode || !cityName) {
+          showAlert('Please select your state and city.');
           return;
         }
       }

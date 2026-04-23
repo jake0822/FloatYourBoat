@@ -12,6 +12,30 @@ const KEYS = {
   GEO_CACHE:     'fyb_geo_cache',
 };
 
+// ── Buyer Location Options ───────────────────────────────────────────────────
+// Populated asynchronously from /api/cities on initData()
+let BUYER_LOCATIONS = {};
+
+let _citiesPromise = null;
+
+function loadCities() {
+  if (_citiesPromise) return _citiesPromise;
+  _citiesPromise = fetch('/api/cities')
+    .then(res => {
+      if (!res.ok) throw new Error('Failed to load city data');
+      return res.json();
+    })
+    .then(data => {
+      BUYER_LOCATIONS = data;
+      if (window.FYB) window.FYB.BUYER_LOCATIONS = data;
+    })
+    .catch(err => {
+      console.error('Failed to load city data:', err);
+      // BUYER_LOCATIONS stays as empty object; dropdowns will be empty
+    });
+  return _citiesPromise;
+}
+
 // ── Sample Data ───────────────────────────────────────────────────────────────
 const SAMPLE_USERS = [
   {
@@ -238,6 +262,7 @@ function initData() {
   }
   normalizeStoredUsers();
   normalizeStoredListings();
+  return loadCities();
 }
 
 // ── Listings ──────────────────────────────────────────────────────────────────
@@ -510,6 +535,7 @@ async function geocodeLocation(location) {
 window.FYB = window.FYB || {};
 Object.assign(window.FYB, {
   KEYS,
+  BUYER_LOCATIONS,
   initData,
   getListings,
   getListingById,

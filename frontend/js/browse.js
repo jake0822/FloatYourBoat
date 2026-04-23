@@ -10,27 +10,10 @@
   let userLat = null;
   let userLng = null;
   let popularityAlertShown = false;
-  const BUYER_LOCATIONS = {
-    FL: {
-      label: 'Florida',
-      cities: [
-        { name: 'Tallahassee', lat: 30.4383, lng: -84.2807 },
-        { name: 'Orlando', lat: 28.5383, lng: -81.3792 },
-        { name: 'Panama City', lat: 30.1588, lng: -85.6602 },
-        { name: 'Gainesville', lat: 29.6516, lng: -82.3248 },
-        { name: 'Destin', lat: 30.3935, lng: -86.4958 },
-        { name: 'Fort Lauderdale', lat: 26.1224, lng: -80.1373 },
-        { name: 'Pensacola', lat: 30.4213, lng: -87.2169 },
-        { name: 'Miami', lat: 25.7617, lng: -80.1918 },
-        { name: 'Jacksonville', lat: 30.3322, lng: -81.6557 },
-        { name: 'Tampa', lat: 27.9506, lng: -82.4572 },
-      ],
-    },
-  };
 
   // ── Init ───────────────────────────────────────────────────────────────────
-  document.addEventListener('DOMContentLoaded', () => {
-    FYB.initData();
+  document.addEventListener('DOMContentLoaded', async () => {
+    await FYB.initData();
     FYBAuth.renderNav();
     allListings = FYB.getListings().filter(l => l.status === 'available');
     setupBuyerLocationSelectors();
@@ -100,7 +83,7 @@
       if (sortSelect.value === 'proximity') {
         const ready = ensureBuyerLocation();
         if (!ready) {
-          sortSelect.value = 'newest';
+          sortSelect.value = 'price-asc';
         }
       }
       applyFilters();
@@ -140,7 +123,7 @@
     placeholder.textContent = 'Select state';
     stateSelect.appendChild(placeholder);
 
-    for (const [code, state] of Object.entries(BUYER_LOCATIONS)) {
+    for (const [code, state] of Object.entries(FYB.BUYER_LOCATIONS)) {
       const option = document.createElement('option');
       option.value = code;
       option.textContent = state.label;
@@ -149,7 +132,7 @@
   }
 
   function renderCityOptions(citySelect, stateCode, selectedCity = '') {
-    const state = BUYER_LOCATIONS[stateCode];
+    const state = FYB.BUYER_LOCATIONS[stateCode];
     citySelect.replaceChildren();
     const placeholder = document.createElement('option');
     placeholder.value = '';
@@ -177,7 +160,7 @@
   }
 
   function findCity(stateCode, cityName) {
-    const state = BUYER_LOCATIONS[stateCode];
+    const state = FYB.BUYER_LOCATIONS[stateCode];
     if (!state) return null;
     return state.cities.find(c => c.name === cityName) || null;
   }
@@ -196,7 +179,7 @@
   function normalizeStateCode(stateText) {
     const normalized = (stateText || '').trim().toLowerCase();
     if (!normalized) return null;
-    for (const [stateCode, state] of Object.entries(BUYER_LOCATIONS)) {
+    for (const [stateCode, state] of Object.entries(FYB.BUYER_LOCATIONS)) {
       if (normalized === stateCode.toLowerCase() || normalized === state.label.toLowerCase()) {
         return stateCode;
       }
@@ -210,7 +193,7 @@
     const type     = document.getElementById('type')?.value || '';
     const minPrice = parseFloat(document.getElementById('min-price')?.value) || 0;
     const maxPrice = parseFloat(document.getElementById('max-price')?.value) || Infinity;
-    const sort     = document.getElementById('sort')?.value || 'newest';
+    const sort     = document.getElementById('sort')?.value || 'price-asc';
     const showSold = document.getElementById('show-sold')?.checked || false;
 
     let results = FYB.getListings();
@@ -236,12 +219,6 @@
 
     // Sort
     switch (sort) {
-      case 'newest':
-        results.sort((a, b) => new Date(b.datePosted) - new Date(a.datePosted));
-        break;
-      case 'oldest':
-        results.sort((a, b) => new Date(a.datePosted) - new Date(b.datePosted));
-        break;
       case 'price-asc':
         results.sort((a, b) => a.price - b.price);
         break;
@@ -390,7 +367,7 @@
     document.getElementById('type').value = '';
     document.getElementById('min-price').value = '';
     document.getElementById('max-price').value = '';
-    document.getElementById('sort').value = 'newest';
+    document.getElementById('sort').value = 'price-asc';
     document.getElementById('show-sold').checked = false;
     applyFilters();
   };
