@@ -113,6 +113,18 @@ def delete_buyer(buyer_username: str):
     return {'success': True}
 
 
+# Check if buyer exists (used for login)
+@app.route('/api/buyer_exists/<buyer_username>', methods=['GET'])
+def get_buyer_exists(buyer_username: str):
+    db = get_db()
+    exists = db.execute('SELECT 1 FROM Buyers WHERE username = ?', [buyer_username]).fetchone() is not None
+
+    if exists:
+        return {'success': True}
+
+    return {'error': 'Buyer not found'}, 404
+
+
 # Add or update seller
 @app.route('/api/add_or_update_seller', methods=['POST', 'PUT'])
 def add_or_update_seller():
@@ -147,6 +159,18 @@ def delete_seller(seller_username: str):
         return {'error': 'Seller not found'}, 404
     
     return {'success': True}
+
+
+# Check if seller exists (used for login)
+@app.route('/api/seller_exists/<seller_username>', methods=['GET'])
+def get_seller_exists(seller_username: str):
+    db = get_db()
+    exists = db.execute('SELECT 1 FROM Sellers WHERE username = ?', [seller_username]).fetchone() is not None
+
+    if exists:
+        return {'success': True}
+
+    return {'error': 'Seller not found'}, 404
 
 
 # Get all of a seller's listings
