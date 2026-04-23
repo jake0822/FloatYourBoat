@@ -113,6 +113,18 @@ def delete_buyer(buyer_username: str):
     return {'success': True}
 
 
+# Check if buyer exists (used for login)
+@app.route('/api/buyer_exists/<buyer_username>', methods=['GET'])
+def get_buyer_exists(buyer_username: str):
+    db = get_db()
+    exists = db.execute('SELECT 1 FROM Buyers WHERE username = ?', [buyer_username]).fetchone() is not None
+
+    if exists:
+        return {'success': True}
+
+    return {'error': 'Buyer not found'}, 404
+
+
 # Add or update seller
 @app.route('/api/add_or_update_seller', methods=['POST', 'PUT'])
 def add_or_update_seller():
@@ -147,6 +159,18 @@ def delete_seller(seller_username: str):
         return {'error': 'Seller not found'}, 404
     
     return {'success': True}
+
+
+# Check if seller exists (used for login)
+@app.route('/api/seller_exists/<seller_username>', methods=['GET'])
+def get_seller_exists(seller_username: str):
+    db = get_db()
+    exists = db.execute('SELECT 1 FROM Sellers WHERE username = ?', [seller_username]).fetchone() is not None
+
+    if exists:
+        return {'success': True}
+
+    return {'error': 'Seller not found'}, 404
 
 
 # Get all of a seller's listings
@@ -222,3 +246,38 @@ def get_browse_page(page_number: int):
         [offset]
     ).fetchall()
     return jsonify([dict(listing) for listing in listings])
+
+
+@app.route('/api/save_listing', methods=['POST'])
+def save_listing():
+    data: dict = request.json
+    db = get_db()
+
+    row_exists = db.execute('SELECT EXISTS(SELECT 1 FROM Saved_Listings WHERE buyer_username = ? AND listing_id = ?)',
+                        [data['buyer_username'], data['listing_id']]
+    ).fetchone()[0]
+    
+    if not row_exists:
+        db.execute('INSERT INTO Saved_Listings (buyer_username, listing_id) VALUES (?, ?)',
+                [data['buyer_username'], data['listing_id']]
+        )
+        db.commit()
+        return {'success': True}
+
+    return {'error': 'Listing is already saved'}, 409
+
+
+@app.route('/api/unsave_listing', methods=['POST'])
+def unsave_listing():
+    data: dict = request.json
+    db = get_db()
+
+    result = db.execute('DELETE FROM Saved_Listings WHERE buyer_username = ? AND listing_id = ?',
+                        [data['buyer_username'], data['listing_id']]
+    )
+    db.commit()
+
+    if result.rowcount == 0:
+        return {'error': 'Not found'}, 404
+    
+    return {'success': True}
