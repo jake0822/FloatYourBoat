@@ -16,6 +16,12 @@ let _initPromise = null;
 
 let usersCache = [];
 let listingsCache = [];
+let usersByUsername = new Map();
+const BROWSE_PAGE_SIZE = 10;
+
+function rebuildUserLookup() {
+  usersByUsername = new Map(usersCache.map(user => [user.username, user]));
+}
 
 function loadCities() {
   if (_citiesPromise) return _citiesPromise;
@@ -77,7 +83,7 @@ function normalizeDate(value) {
 function mapListingFromApi(raw) {
   const id = String(raw?.listing_id ?? '');
   const sellerUsername = raw?.seller_username || '';
-  const seller = usersCache.find(u => u.username === sellerUsername);
+  const seller = usersByUsername.get(sellerUsername);
   return {
     id,
     title: raw?.name || 'Untitled Listing',
@@ -104,9 +110,10 @@ async function loadListings() {
 
   while (true) {
     const batch = await apiJson(`/api/get_browse_page/${page}`);
-    if (!Array.isArray(batch) || batch.length === 0) break;
+    if (!Array.isArray(batch)) break;
+    if (batch.length === 0) break;
     all.push(...batch);
-    if (batch.length < 10) break;
+    if (batch.length < BROWSE_PAGE_SIZE) break;
     page += 1;
   }
 
@@ -138,14 +145,22 @@ function setUsersStore(users) {
   localStorage.setItem(KEYS.USERS, JSON.stringify(users));
 }
 
-function ensureSavedListingIdsLoaded() {
-  return Promise.resolve();
+function ensureSavedListingIdsLoaded(userId) {
+  if (!userId) return Promise.resolve([]);
+  const store = getSavedStore();
+  const key = String(userId);
+  if (!Array.isArray(store[key])) {
+    store[key] = [];
+    setSavedStore(store);
+  }
+  return Promise.resolve(store[key]);
 }
 
 async function initData() {
   if (_initPromise) return _initPromise;
   _initPromise = (async () => {
     usersCache = getUsersStore();
+    rebuildUserLookup();
     await loadCities();
     await loadListings();
     setUsersStore(usersCache);
@@ -169,6 +184,7 @@ function saveListings(listings) {
 }
 
 async function addListing(listing) {
+  const existingIds = new Set(listingsCache.map(l => l.id));
   const payload = {
     listing_id: 0,
     name: listing?.title || 'Untitled Listing',
@@ -186,7 +202,8 @@ async function addListing(listing) {
   });
 
   await loadListings();
-  return listingsCache[0] || null;
+  const created = listingsCache.find(l => !existingIds.has(l.id));
+  return created || null;
 }
 
 async function updateListing(id, updates) {
@@ -215,8 +232,12 @@ async function updateListing(id, updates) {
 }
 
 async function deleteListing(id) {
-  await apiJson(`/api/delete_listing/${Number(id)}`, { method: 'DELETE' });
-  listingsCache = listingsCache.filter(l => l.id !== String(id));
+  try {
+    await apiJson(`/api/delete_listing/${Number(id)}`, { method: 'DELETE' });
+    listingsCache = listingsCache.filter(l => l.id !== String(id));
+  } catch (err) {
+    throw err;
+  }
 }
 
 function getListingsBySeller(sellerId) {
@@ -230,6 +251,7 @@ function getUsers() {
 
 function saveUsers(users) {
   usersCache = Array.isArray(users) ? users.slice() : [];
+  rebuildUserLookup();
   setUsersStore(usersCache);
 }
 
@@ -240,6 +262,7 @@ function updateUser(id, updates) {
 
   const updated = { ...usersCache[idx], ...updates };
   usersCache[idx] = updated;
+  rebuildUserLookup();
   setUsersStore(usersCache);
 
   const endpoint = updated.role === 'buyer' ? '/api/add_or_update_buyer' : '/api/add_or_update_seller';
@@ -255,6 +278,7 @@ function updateUser(id, updates) {
         email: updated.email || '',
       };
 
+  // Intentionally fire-and-forget: UI updates immediately, and backend sync follows.
   apiJson(endpoint, {
     method: 'PUT',
     body: JSON.stringify(payload),
@@ -290,6 +314,7 @@ async function registerUser(user) {
   };
 
   usersCache.push(created);
+  rebuildUserLookup();
   setUsersStore(usersCache);
 
   const endpoint = created.role === 'buyer' ? '/api/add_or_update_buyer' : '/api/add_or_update_seller';

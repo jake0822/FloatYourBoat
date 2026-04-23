@@ -355,7 +355,6 @@
     }
     allListings = FYB.getListings().filter(l => l.status === 'available');
     popularityAlertShown = false;
-    applyFilters();
   };
 
   // ── Notification Helper ────────────────────────────────────────────────────
