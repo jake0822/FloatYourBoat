@@ -218,7 +218,7 @@
         }
       }
 
-      const result = FYBAuth.register(username, name, email, role, location);
+      const result = await FYBAuth.register(username, name, email, role, location);
       if (result.error) {
         showAlert(result.error);
       } else {

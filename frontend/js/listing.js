@@ -5,8 +5,12 @@
 (function () {
   const { FYB, FYBAuth } = window;
 
-  document.addEventListener('DOMContentLoaded', () => {
-    FYB.initData();
+  document.addEventListener('DOMContentLoaded', async () => {
+    await FYB.initData();
+    const currentUser = FYBAuth.getCurrentUser();
+    if (currentUser?.role === 'buyer') {
+      await FYB.ensureSavedListingIdsLoaded(currentUser.id);
+    }
     FYBAuth.renderNav();
 
     const params = new URLSearchParams(location.search);
@@ -134,14 +138,19 @@
     }
   }
 
-  window.handleSave = function (listingId) {
+  window.handleSave = async function (listingId) {
     const user = FYBAuth.getCurrentUser();
     if (!user) { window.location.href = 'login'; return; }
     const saved = FYB.isListingSaved(user.id, listingId);
-    if (saved) {
-      FYB.unsaveListing(user.id, listingId);
-    } else {
-      FYB.saveListing(user.id, listingId);
+    try {
+      if (saved) {
+        await FYB.unsaveListing(user.id, listingId);
+      } else {
+        await FYB.saveListing(user.id, listingId);
+      }
+    } catch {
+      showNotification('Unable to update saved listing right now.', 'danger');
+      return;
     }
     // Re-render to reflect updated state
     const listing = FYB.getListingById(listingId);
