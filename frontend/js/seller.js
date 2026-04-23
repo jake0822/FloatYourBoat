@@ -210,11 +210,21 @@
     };
 
     if (editingId) {
-      await FYB.updateListing(editingId, data);
-      showNotification('✅ Listing updated successfully.', 'success');
+      try {
+        await FYB.updateListing(editingId, data);
+        showNotification('✅ Listing updated successfully.', 'success');
+      } catch {
+        showNotification('❌ Failed to update listing. Please try again.', 'danger');
+        return;
+      }
     } else {
-      await FYB.addListing(data);
-      showNotification('✅ Listing created successfully.', 'success');
+      try {
+        await FYB.addListing(data);
+        showNotification('✅ Listing created successfully.', 'success');
+      } catch {
+        showNotification('❌ Failed to create listing. Please try again.', 'danger');
+        return;
+      }
     }
 
     closeForm();
@@ -230,23 +240,35 @@
   // ── Mark Sold / Re-list ────────────────────────────────────────────────────
   window.handleMarkSold = async function (id) {
     if (!confirm('Mark this listing as sold?')) return;
-    await FYB.updateListing(id, { status: 'sold' });
-    renderMyListings();
-    showNotification('Listing marked as sold.', 'info');
+    try {
+      await FYB.updateListing(id, { status: 'sold' });
+      renderMyListings();
+      showNotification('Listing marked as sold.', 'info');
+    } catch {
+      showNotification('Failed to mark listing as sold. Please try again.', 'danger');
+    }
   };
 
   window.handleMarkAvailable = async function (id) {
-    await FYB.updateListing(id, { status: 'available' });
-    renderMyListings();
-    showNotification('Listing re-listed as available.', 'success');
+    try {
+      await FYB.updateListing(id, { status: 'available' });
+      renderMyListings();
+      showNotification('Listing re-listed as available.', 'success');
+    } catch {
+      showNotification('Failed to re-list the listing. Please try again.', 'danger');
+    }
   };
 
   // ── Delete ─────────────────────────────────────────────────────────────────
   window.handleDelete = async function (id) {
     if (!confirm('Are you sure you want to permanently delete this listing?')) return;
-    await FYB.deleteListing(id);
-    renderMyListings();
-    showNotification('Listing deleted.', 'danger');
+    try {
+      await FYB.deleteListing(id);
+      renderMyListings();
+      showNotification('Listing deleted.', 'danger');
+    } catch {
+      showNotification('Failed to delete listing. Please try again.', 'danger');
+    }
   };
 
   // ── Form Validation ────────────────────────────────────────────────────────

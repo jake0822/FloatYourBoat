@@ -294,7 +294,8 @@
       const isSaved = user && FYB.isListingSaved(user.id, l.id);
       const saveCount = FYB.getSaveCount(l);
       const isPopular = saveCount >= 2;
-      const dist = (user && userLat !== null && Number.isFinite(l.lat) && Number.isFinite(l.lng))
+      const hasLocation = user && userLat !== null && Number.isFinite(l.lat) && Number.isFinite(l.lng);
+      const dist = hasLocation
         ? Math.round(FYB.haversineDistance(userLat, userLng, l.lat, l.lng))
         : null;
 

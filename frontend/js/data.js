@@ -117,7 +117,9 @@ async function loadListings() {
     page += 1;
   }
 
-  // Seed seller stubs for any DB seller not yet in local cache so they can log in.
+  // Seed minimal seller stubs from raw listing data so that sellers who exist in
+  // the database but have never registered via the web UI can still log in.
+  // Their name and email will be populated if/when they register through the UI.
   for (const raw of all) {
     const sellerKey = (raw.seller_username || '').trim();
     if (sellerKey && !usersByUsername.has(sellerKey)) {
