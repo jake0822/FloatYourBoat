@@ -8,8 +8,8 @@
 
   let editingId = null;
 
-  document.addEventListener('DOMContentLoaded', () => {
-    FYB.initData();
+  document.addEventListener('DOMContentLoaded', async () => {
+    await FYB.initData();
     FYBAuth.requireSeller();
     FYBAuth.renderNav();
 
@@ -19,6 +19,8 @@
       document.getElementById('form-seller-id').value = user.id;
       document.getElementById('form-seller-name').value = user.name;
     }
+
+    renderLocationStateOptions();
 
     // Check for edit query param (coming from listing detail page)
     const params = new URLSearchParams(location.search);
@@ -33,6 +35,55 @@
     renderMyListings();
     setupFormValidation();
   });
+
+  // ── Location Dropdowns ─────────────────────────────────────────────────────
+  function renderLocationStateOptions() {
+    const stateSelect = document.getElementById('form-location-state');
+    if (!stateSelect) return;
+
+    stateSelect.replaceChildren();
+    const placeholder = document.createElement('option');
+    placeholder.value = '';
+    placeholder.textContent = 'Select state…';
+    stateSelect.appendChild(placeholder);
+
+    for (const [code, state] of Object.entries(FYB.BUYER_LOCATIONS)) {
+      const option = document.createElement('option');
+      option.value = code;
+      option.textContent = state.label;
+      stateSelect.appendChild(option);
+    }
+
+    stateSelect.addEventListener('change', () => {
+      renderLocationCityOptions(stateSelect.value, '');
+    });
+  }
+
+  function renderLocationCityOptions(stateCode, selectedCity = '') {
+    const citySelect = document.getElementById('form-location-city');
+    if (!citySelect) return;
+
+    citySelect.replaceChildren();
+    const placeholder = document.createElement('option');
+    placeholder.value = '';
+    placeholder.textContent = 'Select city…';
+    citySelect.appendChild(placeholder);
+
+    const state = FYB.BUYER_LOCATIONS[stateCode];
+    if (state) {
+      for (const city of state.cities) {
+        const option = document.createElement('option');
+        option.value = city.name;
+        option.textContent = city.name;
+        citySelect.appendChild(option);
+      }
+    }
+
+    citySelect.disabled = !state;
+    if (selectedCity && state?.cities.some(c => c.name === selectedCity)) {
+      citySelect.value = selectedCity;
+    }
+  }
 
   // ── Listing Table ──────────────────────────────────────────────────────────
   function renderMyListings() {
@@ -77,6 +128,7 @@
     const user = FYBAuth.getCurrentUser();
     document.getElementById('form-seller-id').value = user.id;
     document.getElementById('form-seller-name').value = user.name;
+    renderLocationCityOptions('', '');
     document.getElementById('listing-form-section').classList.remove('hidden');
     document.getElementById('listing-form-section').scrollIntoView({ behavior: 'smooth' });
   };
@@ -98,12 +150,20 @@
     document.getElementById('form-year').value = listing.year;
     document.getElementById('form-length').value = listing.length;
     document.getElementById('form-price').value = listing.price;
-    document.getElementById('form-location').value = listing.location;
     document.getElementById('form-engine').value = listing.engine || '';
     document.getElementById('form-hours').value = listing.hours !== null ? listing.hours : '';
     document.getElementById('form-condition').value = listing.condition;
     document.getElementById('form-description').value = listing.description;
     document.getElementById('form-image-emoji').value = listing.imageEmoji || '🚤';
+
+    // Parse "City, State" → pre-select state and city dropdowns
+    const parts = (listing.location || '').split(',').map(s => s.trim());
+    const cityName = parts[0] || '';
+    const stateCode = parts[1] || '';
+    const stateSelect = document.getElementById('form-location-state');
+    if (stateSelect) stateSelect.value = stateCode;
+    renderLocationCityOptions(stateCode, cityName);
+
     document.getElementById('listing-form-section').classList.remove('hidden');
     document.getElementById('listing-form-section').scrollIntoView({ behavior: 'smooth' });
   }
@@ -112,19 +172,20 @@
   window.handleFormSubmit = async function (e) {
     e.preventDefault();
     const user = FYBAuth.getCurrentUser();
-    const location = document.getElementById('form-location').value.trim();
-    let geocoded;
 
-    try {
-      geocoded = await FYB.geocodeLocation(location);
-    } catch (err) {
-      console.error('Geocoding failed:', err);
-      showNotification('Map service unavailable. Please try again.', 'danger');
+    const stateCode = document.getElementById('form-location-state').value;
+    const cityName = document.getElementById('form-location-city').value;
+
+    if (!stateCode || !cityName) {
+      showNotification('Please select a state and city for the listing location.', 'warning');
       return;
     }
 
-    if (!geocoded) {
-      showNotification('Please enter a valid location (city/state).', 'warning');
+    const state = FYB.BUYER_LOCATIONS[stateCode];
+    const cityObj = state?.cities.find(c => c.name === cityName);
+
+    if (!cityObj) {
+      showNotification('Please select a valid city.', 'warning');
       return;
     }
 
@@ -136,7 +197,7 @@
       year:        parseInt(document.getElementById('form-year').value),
       length:      parseFloat(document.getElementById('form-length').value),
       price:       parseFloat(document.getElementById('form-price').value),
-      location,
+      location:    `${cityName}, ${stateCode}`,
       engine:      document.getElementById('form-engine').value.trim(),
       hours:       document.getElementById('form-hours').value !== ''
                      ? parseFloat(document.getElementById('form-hours').value)
@@ -144,8 +205,8 @@
       condition:   document.getElementById('form-condition').value,
       description: document.getElementById('form-description').value.trim(),
       imageEmoji:  document.getElementById('form-image-emoji').value.trim() || '🚤',
-      lat: geocoded.lat,
-      lng: geocoded.lng,
+      lat: cityObj.lat,
+      lng: cityObj.lng,
     };
 
     if (editingId) {
