@@ -315,7 +315,6 @@ async function getUserByUsername(username) {
   try {
     let response = await fetch(`/api/get_user/${username}`);
     let data = await response.json();
-    console.log(data);
     if ('error' in data) {
       return null;
     }
@@ -327,7 +326,8 @@ async function getUserByUsername(username) {
 }
 
 async function registerUser(user) {
-  if (getUserByUsername(user.username)) {
+  console.log(user.username);
+  if (await getUserByUsername(user.username)) {
     return { error: 'Username already taken.' };
   }
 
