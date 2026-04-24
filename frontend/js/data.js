@@ -138,6 +138,12 @@ async function loadListings() {
   }
 
   listingsCache = all.map(mapListingFromApi);
+
+  const currentUser = getCurrentUser();
+
+  if (currentUser?.role === 'buyer') {
+    await updateSavedListingIdsFromApi(currentUser.username);
+  }
   return listingsCache;
 }
 
@@ -389,9 +395,22 @@ async function registerUser(user) {
   return created;
 }
 
-function getSavedListingIds(userId) {
+function getSavedListingIds(username) {
   const store = getSavedStore();
-  return store[String(userId || '')] || [];
+  return store[String(username || '')] || [];
+}
+
+async function updateSavedListingIdsFromApi(username) {
+  try {
+    let response = await fetch(`/api/get_saved_listing_ids/${username}`);
+    let savedIds = await response.json();
+    let store = getSavedStore();
+    store[username] = savedIds;
+    localStorage.setItem(KEYS.SAVED_LISTINGS, JSON.stringify(store));
+  }
+  catch {
+    return [];
+  }
 }
 
 function getSaveCountByListingId(listingId) {
@@ -403,8 +422,8 @@ function getSaveCountByListingId(listingId) {
   }, 0);
 }
 
-async function saveListing(userId, listingId) {
-  const userKey = String(userId || '');
+async function saveListing(username, listingId) {
+  const userKey = String(username || '');
   const listingKey = String(listingId || '');
   if (!userKey || !listingKey) return;
 
@@ -413,25 +432,48 @@ async function saveListing(userId, listingId) {
   ids.add(listingKey);
   store[userKey] = Array.from(ids);
   setSavedStore(store);
+
+  await fetch('/api/save_listing', {
+    method: 'POST',
+    body: JSON.stringify({
+      buyer_username: username,
+      listing_id: listingId
+    }),
+    headers: {
+      "Content-type": "application/json"
+    }
+  });
 }
 
-async function unsaveListing(userId, listingId) {
-  const userKey = String(userId || '');
+async function unsaveListing(username, listingId) {
+  const userKey = String(username || '');
   const listingKey = String(listingId || '');
   const store = getSavedStore();
   const ids = new Set(store[userKey] || []);
   ids.delete(listingKey);
   store[userKey] = Array.from(ids);
   setSavedStore(store);
+
+  await fetch('/api/unsave_listing', {
+    method: 'DELETE',
+    body: JSON.stringify({
+      buyer_username: username,
+      listing_id: listingId
+    }),
+    headers: {
+      "Content-type": "application/json"
+    }
+  });
 }
 
-function isListingSaved(userId, listingId) {
-  return getSavedListingIds(userId).includes(String(listingId || ''));
+function isListingSaved(username, listingId) {
+  return getSavedListingIds(username).includes(String(listingId || ''));
 }
 
-function getSavedListings(userId) {
-  const idSet = new Set(getSavedListingIds(userId));
-  return listingsCache.filter(l => idSet.has(String(l.id)));
+function getSavedListings(username) {
+  const idSet = new Set(getSavedListingIds(username).map(i => String(i)));
+  const filtered = listingsCache.filter(l => idSet.has(l.id));
+  return filtered;
 }
 
 function haversineDistance(lat1, lng1, lat2, lng2) {

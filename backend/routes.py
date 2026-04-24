@@ -258,22 +258,25 @@ def save_listing():
                 [data['buyer_username'], data['listing_id']]
         )
         db.commit()
-        return {'success': True}
-
-    return {'error': 'Listing is already saved'}, 409
+    return {'success': True}
 
 
-@app.route('/api/unsave_listing', methods=['POST'])
+@app.route('/api/unsave_listing', methods=['DELETE'])
 def unsave_listing():
     data: dict = request.json
     db = get_db()
 
-    result = db.execute('DELETE FROM Saved_Listings WHERE buyer_username = ? AND listing_id = ?',
+    db.execute('DELETE FROM Saved_Listings WHERE buyer_username = ? AND listing_id = ?',
                         [data['buyer_username'], data['listing_id']]
     )
     db.commit()
-
-    if result.rowcount == 0:
-        return {'error': 'Not found'}, 404
     
     return {'success': True}
+
+
+@app.route('/api/get_saved_listing_ids/<buyer_username>', methods=['GET'])
+def get_saved_listing_ids(buyer_username: str):
+    db = get_db()
+    result = db.execute('SELECT listing_id from Saved_Listings WHERE buyer_username = ?', [buyer_username]).fetchall()
+    return [r['listing_id'] for r in result]
+    

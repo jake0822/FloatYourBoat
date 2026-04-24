@@ -14,7 +14,7 @@
 
   function renderSavedListings() {
     const user = FYBAuth.getCurrentUser();
-    const saved = FYB.getSavedListings(user.id);
+    const saved = FYB.getSavedListings(user.username);
     const container = document.getElementById('saved-container');
     const emptyEl = document.getElementById('empty-state');
     const countEl = document.getElementById('saved-count');
@@ -90,7 +90,7 @@
 
   window.handleUnsave = async function (listingId) {
     const user = FYBAuth.getCurrentUser();
-    await FYB.unsaveListing(user.id, listingId);
+    await FYB.unsaveListing(user.username, listingId);
     renderSavedListings();
     showNotification('Listing removed from your saved list.', 'info');
   };

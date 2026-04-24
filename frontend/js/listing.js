@@ -34,7 +34,7 @@
     if (!container) return;
 
     const user = FYBAuth.getCurrentUser();
-    const isSaved = user && FYB.isListingSaved(user.id, listing.id);
+    const isSaved = user && FYB.isListingSaved(user.username, listing.id);
     const saveCount = FYB.getSaveCount(listing);
     const isPopular = saveCount >= 2;
 
@@ -117,12 +117,12 @@
   window.handleSave = async function (listingId) {
     const user = FYBAuth.getCurrentUser();
     if (!user) { window.location.href = 'login'; return; }
-    const saved = FYB.isListingSaved(user.id, listingId);
+    const saved = FYB.isListingSaved(user.username, listingId);
     try {
       if (saved) {
-        await FYB.unsaveListing(user.id, listingId);
+        await FYB.unsaveListing(user.username, listingId);
       } else {
-        await FYB.saveListing(user.id, listingId);
+        await FYB.saveListing(user.username, listingId);
       }
     } catch {
       showNotification('Unable to update saved listing right now.', 'danger');

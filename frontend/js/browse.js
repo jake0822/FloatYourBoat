@@ -325,7 +325,7 @@
     const POPULAR_THRESHOLD = 2;
     const popularSaved = results.filter(l =>
       FYB.getSaveCount(l) >= POPULAR_THRESHOLD &&
-      FYB.isListingSaved(user.id, l.id)
+      FYB.isListingSaved(user.username, l.id)
     );
 
     if (popularSaved.length > 0 && !popularityAlertShown) {
@@ -357,7 +357,7 @@
     const user = FYBAuth.getCurrentUser();
 
     container.innerHTML = listings.map(l => {
-      const isSaved = user && FYB.isListingSaved(user.id, l.id);
+      const isSaved = user && FYB.isListingSaved(user.username, l.id);
       const saveCount = FYB.getSaveCount(l);
       const isPopular = saveCount >= 2;
       const listingCoords = findLocationByText(l.location || '');
@@ -417,16 +417,16 @@
   // ── Save Toggle ────────────────────────────────────────────────────────────
   window.toggleSave = async function (listingId, btn) {
     const user = FYBAuth.getCurrentUser();
-    if (!user) { window.location.href = 'index.html'; return; }
-    const saved = FYB.isListingSaved(user.id, listingId);
+    if (!user) { window.location.href = '/'; return; }
+    const saved = FYB.isListingSaved(user.username, listingId);
     try {
       if (saved) {
-        await FYB.unsaveListing(user.id, listingId);
+        await FYB.unsaveListing(user.username, listingId);
         btn.textContent = '+ Save';
         btn.classList.remove('btn-warning');
         btn.classList.add('btn-outline');
       } else {
-        await FYB.saveListing(user.id, listingId);
+        await FYB.saveListing(user.username, listingId);
         btn.textContent = '🔖 Saved';
         btn.classList.remove('btn-outline');
         btn.classList.add('btn-warning');
