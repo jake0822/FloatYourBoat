@@ -19,7 +19,7 @@
     }
 
     renderLocationStateOptions();
-    renderMyListings();
+    await renderMyListings();
   });
 
   function renderLocationStateOptions() {
@@ -54,9 +54,9 @@
     if (selectedCity) citySelect.value = selectedCity;
   }
 
-  function renderMyListings() {
+  async function renderMyListings() {
     const user = FYBAuth.getCurrentUser();
-    const listings = FYB.getListingsBySeller(user.id);
+    const listings = await FYB.getListingsBySeller(user.username);
     const tbody = document.getElementById('listings-tbody');
     const empty = document.getElementById('empty-listings');
 
@@ -167,7 +167,7 @@
         showNotification('✅ Listing created.', 'success');
       }
       closeForm();
-      renderMyListings();
+      await renderMyListings();
     } catch {
       showNotification('❌ Unable to save listing.', 'danger');
     }
@@ -180,20 +180,20 @@
 
   window.handleMarkSold = async id => {
     await FYB.updateListing(id, { status: 'sold' });
-    renderMyListings();
+    await renderMyListings();
     showNotification('Listing marked sold.', 'info');
   };
 
   window.handleMarkAvailable = async id => {
     await FYB.updateListing(id, { status: 'available' });
-    renderMyListings();
+    await renderMyListings();
     showNotification('Listing re-listed.', 'success');
   };
 
   window.handleDelete = async id => {
     if (!confirm('Delete this listing permanently?')) return;
     await FYB.deleteListing(id);
-    renderMyListings();
+    await renderMyListings();
     showNotification('Listing deleted.', 'danger');
   };
 
