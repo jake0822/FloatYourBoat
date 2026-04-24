@@ -78,30 +78,6 @@
 
           <div class="listing-meta">
             <div class="listing-meta-item">
-              <div class="meta-label">Type</div>
-              <div class="meta-value">${FYBAuth.escapeHtml(listing.type)}</div>
-            </div>
-            <div class="listing-meta-item">
-              <div class="meta-label">Year</div>
-              <div class="meta-value">${listing.year}</div>
-            </div>
-            <div class="listing-meta-item">
-              <div class="meta-label">Length</div>
-              <div class="meta-value">${listing.length} ft</div>
-            </div>
-            <div class="listing-meta-item">
-              <div class="meta-label">Engine</div>
-              <div class="meta-value">${FYBAuth.escapeHtml(listing.engine || 'N/A')}</div>
-            </div>
-            <div class="listing-meta-item">
-              <div class="meta-label">Engine Hours</div>
-              <div class="meta-value">${listing.hours !== null ? listing.hours : 'N/A'}</div>
-            </div>
-            <div class="listing-meta-item">
-              <div class="meta-label">Condition</div>
-              <div class="meta-value">${FYBAuth.escapeHtml(listing.condition)}</div>
-            </div>
-            <div class="listing-meta-item">
               <div class="meta-label">Location</div>
               <div class="meta-value">${FYBAuth.escapeHtml(listing.location)}</div>
             </div>
