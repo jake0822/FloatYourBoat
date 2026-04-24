@@ -173,8 +173,8 @@
     }
   };
 
-  window.handleEdit = id => {
-    const listing = FYB.getListingById(id);
+  window.handleEdit = async id => {
+    const listing = await FYB.getListingById(id);
     if (listing) openEditForm(listing);
   };
 

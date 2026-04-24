@@ -195,7 +195,19 @@ function getListings() {
   return listingsCache.slice();
 }
 
-function getListingById(id) {
+async function getListingById(id) {
+  try {
+    let response = await fetch(`/api/get_listing/${id}`);
+    let data = await response.json();
+    if ('error' in data) {
+      return null;
+    }
+
+    return mapListingFromApi(data);
+  }
+  catch {
+    return null;
+  }
   const key = String(id);
   return listingsCache.find(l => l.id === key) || null;
 }
@@ -228,7 +240,7 @@ async function addListing(listing) {
 }
 
 async function updateListing(id, updates) {
-  const current = getListingById(id);
+  const current = await getListingById(id);
   if (!current) return null;
 
   const next = { ...current, ...updates };

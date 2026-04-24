@@ -20,7 +20,7 @@
       return;
     }
 
-    const listing = FYB.getListingById(id);
+    const listing = await FYB.getListingById(id);
     if (!listing) {
       showError('Listing not found.');
       return;
@@ -129,14 +129,14 @@
       return;
     }
     // Re-render to reflect updated state
-    const listing = FYB.getListingById(listingId);
+    const listing = await FYB.getListingById(listingId);
     if (listing) renderListing(listing);
   };
 
-  window.handleContact = function (listingId) {
-    const listing = FYB.getListingById(listingId);
+  window.handleContact = async function (listingId) {
+    const listing = await FYB.getListingById(listingId);
     if (!listing) return;
-    const seller = FYB.getUserByUsername(listing.sellerUsername);
+    const seller = await FYB.getUserByUsername(listing.sellerUsername);
     if (!seller) {
       showNotification('Unable to find seller information for this listing.', 'danger');
       return;
