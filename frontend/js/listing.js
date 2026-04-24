@@ -136,7 +136,7 @@
   window.handleContact = function (listingId) {
     const listing = FYB.getListingById(listingId);
     if (!listing) return;
-    const seller = FYB.getUserById(listing.sellerId);
+    const seller = FYB.getUserByUsername(listing.sellerUsername);
     if (!seller) {
       showNotification('Unable to find seller information for this listing.', 'danger');
       return;

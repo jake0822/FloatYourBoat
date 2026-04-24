@@ -49,8 +49,9 @@ function requireSeller() {
 }
 
 // ── Login ──────────────────────────────────────────────────────────────────────
-function login(username) {
-  const user = FYB.getUserByUsername(username.trim());
+async function login(username) {
+  console.log(username);
+  const user = await FYB.getUserByUsername(username.trim());
   if (!user) return { error: 'No account found with that username.' };
   setCurrentUser(user);
   return { user };

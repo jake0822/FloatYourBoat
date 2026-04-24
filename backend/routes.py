@@ -113,16 +113,24 @@ def delete_buyer(buyer_username: str):
     return {'success': True}
 
 
-# Check if buyer exists (used for login)
-@app.route('/api/buyer_exists/<buyer_username>', methods=['GET'])
-def get_buyer_exists(buyer_username: str):
+# Check if user exists
+@app.route('/api/get_user/<username>', methods=['GET'])
+def get_user(username: str):
     db = get_db()
-    exists = db.execute('SELECT 1 FROM Buyers WHERE username = ?', [buyer_username]).fetchone() is not None
 
-    if exists:
-        return {'success': True}
+    buyer_result = db.execute('SELECT * FROM Buyers WHERE username = ?', [username]).fetchone()
+    if buyer_result is not None:
+        user = dict(buyer_result)
+        user['role'] = 'buyer'
+        return user
 
-    return {'error': 'Buyer not found'}, 404
+    seller_result = db.execute('SELECT * FROM Sellers WHERE username = ?', [username]).fetchone()
+    if seller_result is not None:
+        user = dict(seller_result)
+        user['role'] = 'seller'
+        return user
+
+    return {'error': 'User not found'}, 404
 
 
 # Add or update seller
@@ -159,18 +167,6 @@ def delete_seller(seller_username: str):
         return {'error': 'Seller not found'}, 404
     
     return {'success': True}
-
-
-# Check if seller exists (used for login)
-@app.route('/api/seller_exists/<seller_username>', methods=['GET'])
-def get_seller_exists(seller_username: str):
-    db = get_db()
-    exists = db.execute('SELECT 1 FROM Sellers WHERE username = ?', [seller_username]).fetchone() is not None
-
-    if exists:
-        return {'success': True}
-
-    return {'error': 'Seller not found'}, 404
 
 
 # Get all of a seller's listings
