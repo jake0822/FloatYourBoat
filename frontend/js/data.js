@@ -261,7 +261,15 @@ async function deleteListing(id) {
   }
 }
 
-function getListingsBySeller(sellerId) {
+async function getListingsBySeller(sellerUsername) {
+  try {
+    let response = await fetch(`/api/get_seller_listings/${sellerUsername}`);
+    let listings = await response.json();
+    return listings.map(mapListingFromApi);
+  }
+  catch {
+    return [];
+  }
   const key = String(sellerId || '').toLowerCase();
   return listingsCache.filter(l => (l.sellerId || '').toLowerCase() === key);
 }
