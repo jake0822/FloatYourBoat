@@ -467,7 +467,7 @@ async function unsaveListing(username, listingId) {
 }
 
 function isListingSaved(username, listingId) {
-  return getSavedListingIds(username).includes(String(listingId || ''));
+  return getSavedListingIds(username).map(i => String(i)).includes(String(listingId || ''));
 }
 
 function getSavedListings(username) {
