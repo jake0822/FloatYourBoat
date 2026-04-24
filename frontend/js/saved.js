@@ -75,7 +75,7 @@
           </div>
           <div class="card-title">${FYBAuth.escapeHtml(l.title)}</div>
           <div class="card-text">${FYBAuth.escapeHtml(l.location)}</div>
-          <div class="card-text">${FYBAuth.escapeHtml(l.type)}</div>
+          <div class="card-text">${FYBAuth.escapeHtml(l.type)} </div>
           <div class="card-price">${FYB.formatPrice(l.price)}</div>
           <div class="stats-row">
             <span class="stat-item"><span class="stat-icon">🔖</span> ${saveCount} saved</span>
