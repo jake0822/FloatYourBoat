@@ -14,6 +14,10 @@
   // ── Init ───────────────────────────────────────────────────────────────────
   document.addEventListener('DOMContentLoaded', async () => {
     await FYB.initData();
+    const currentUser = FYBAuth.getCurrentUser();
+    if (currentUser?.role === 'buyer') {
+      await FYB.ensureSavedListingIdsLoaded(currentUser.id);
+    }
     FYBAuth.renderNav();
     allListings = FYB.getListings().filter(l => l.status === 'available');
     setupBuyerLocationSelectors();
@@ -256,7 +260,7 @@
     const POPULAR_THRESHOLD = 2;
     const popularSaved = results.filter(l =>
       FYB.getSaveCount(l) >= POPULAR_THRESHOLD &&
-      l.savedBy.includes(user.id)
+      FYB.isListingSaved(user.id, l.id)
     );
 
     if (popularSaved.length > 0 && !popularityAlertShown) {
@@ -290,7 +294,8 @@
       const isSaved = user && FYB.isListingSaved(user.id, l.id);
       const saveCount = FYB.getSaveCount(l);
       const isPopular = saveCount >= 2;
-      const dist = (user && userLat !== null)
+      const hasLocation = user && userLat !== null && Number.isFinite(l.lat) && Number.isFinite(l.lng);
+      const dist = hasLocation
         ? Math.round(FYB.haversineDistance(userLat, userLng, l.lat, l.lng))
         : null;
 
@@ -330,20 +335,24 @@
   }
 
   // ── Save Toggle ────────────────────────────────────────────────────────────
-  window.toggleSave = function (listingId, btn) {
+  window.toggleSave = async function (listingId, btn) {
     const user = FYBAuth.getCurrentUser();
     if (!user) { window.location.href = 'index.html'; return; }
     const saved = FYB.isListingSaved(user.id, listingId);
-    if (saved) {
-      FYB.unsaveListing(user.id, listingId);
-      btn.textContent = '+ Save';
-      btn.classList.remove('btn-warning');
-      btn.classList.add('btn-outline');
-    } else {
-      FYB.saveListing(user.id, listingId);
-      btn.textContent = '🔖 Saved';
-      btn.classList.remove('btn-outline');
-      btn.classList.add('btn-warning');
+    try {
+      if (saved) {
+        await FYB.unsaveListing(user.id, listingId);
+        btn.textContent = '+ Save';
+        btn.classList.remove('btn-warning');
+        btn.classList.add('btn-outline');
+      } else {
+        await FYB.saveListing(user.id, listingId);
+        btn.textContent = '🔖 Saved';
+        btn.classList.remove('btn-outline');
+        btn.classList.add('btn-warning');
+      }
+    } catch {
+      showNotification('Unable to update saved listing right now.', 'danger');
     }
     allListings = FYB.getListings().filter(l => l.status === 'available');
     popularityAlertShown = false;

@@ -57,7 +57,7 @@ function login(username) {
 }
 
 // ── Register ───────────────────────────────────────────────────────────────────
-function register(username, name, email, role, location = '') {
+async function register(username, name, email, role, location = '') {
   if (!username || !name || !email || !role) {
     return { error: 'All fields are required.' };
   }
@@ -65,7 +65,7 @@ function register(username, name, email, role, location = '') {
   if (role === 'buyer' && !cleanLocation) {
     return { error: 'Location is required for buyer accounts.' };
   }
-  const result = FYB.registerUser({
+  const result = await FYB.registerUser({
     username: username.trim(),
     name: name.trim(),
     email: email.trim(),

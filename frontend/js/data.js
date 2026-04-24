@@ -1,22 +1,27 @@
 /**
  * data.js — FloatYourBoat Data Layer
- * Manages sample data and localStorage persistence.
+ * Uses backend APIs for listings/cities and local storage for user/session extras.
  */
 
-// ── Storage Keys ──────────────────────────────────────────────────────────────
 const KEYS = {
-  LISTINGS:      'fyb_listings',
-  USERS:         'fyb_users',
-  CURRENT_USER:  'fyb_current_user',
-  SAVED_LISTINGS:'fyb_saved_listings',
-  GEO_CACHE:     'fyb_geo_cache',
+  USERS: 'fyb_users',
+  SAVED_LISTINGS: 'fyb_saved_listings',
+  CURRENT_USER: 'fyb_current_user',
+  GEO_CACHE: 'fyb_geo_cache',
 };
 
-// ── Buyer Location Options ───────────────────────────────────────────────────
-// Populated asynchronously from /api/cities on initData()
 let BUYER_LOCATIONS = {};
-
 let _citiesPromise = null;
+let _initPromise = null;
+
+let usersCache = [];
+let listingsCache = [];
+let usersByUsername = new Map();
+const BROWSE_PAGE_SIZE = 10;
+
+function rebuildUserLookup() {
+  usersByUsername = new Map(usersCache.map(user => [user.username, user]));
+}
 
 function loadCities() {
   if (_citiesPromise) return _citiesPromise;
@@ -26,364 +31,384 @@ function loadCities() {
       return res.json();
     })
     .then(data => {
-      BUYER_LOCATIONS = data;
-      if (window.FYB) window.FYB.BUYER_LOCATIONS = data;
+      BUYER_LOCATIONS = data || {};
+      if (window.FYB) window.FYB.BUYER_LOCATIONS = BUYER_LOCATIONS;
     })
     .catch(err => {
       console.error('Failed to load city data:', err);
-      // BUYER_LOCATIONS stays as empty object; dropdowns will be empty
+      BUYER_LOCATIONS = {};
     });
   return _citiesPromise;
 }
 
-// ── Sample Data ───────────────────────────────────────────────────────────────
-const SAMPLE_USERS = [
-  {
-    id: 'u1',
-    username: 'alice_buyer',
-    role: 'buyer',
-    name: 'Alice Johnson',
-    email: 'alice@example.com',
-    location: 'Tallahassee, FL',
-  },
-  {
-    id: 'u2',
-    username: 'bob_seller',
-    role: 'seller',
-    name: 'Bob Martinez',
-    email: 'bob@example.com',
-  },
-  {
-    id: 'u3',
-    username: 'carol_buyer',
-    role: 'buyer',
-    name: 'Carol Williams',
-    email: 'carol@example.com',
-    location: 'Orlando, FL',
-  },
-  {
-    id: 'u4',
-    username: 'dave_seller',
-    role: 'seller',
-    name: 'Dave Thompson',
-    email: 'dave@example.com',
-  },
-];
+async function apiJson(url, options = {}) {
+  const res = await fetch(url, {
+    headers: {
+      'Content-Type': 'application/json',
+      Accept: 'application/json',
+      ...(options.headers || {}),
+    },
+    ...options,
+  });
 
-const SAMPLE_LISTINGS = [
-  {
-    id: 'l1',
-    sellerId: 'u2',
-    sellerName: 'Bob Martinez',
-    title: '2019 Sea Ray SPX 190',
-    type: 'Runabout',
-    year: 2019,
-    length: 19,
-    price: 28500,
-    location: 'Tallahassee, FL',
-    lat: 30.4383,
-    lng: -84.2807,
-    description:
-      'Beautiful 2019 Sea Ray SPX 190 in excellent condition. Single axle trailer included. MercruiserTM 4.3L MPI engine with only 87 hours. Fresh water only. Bimini top, ski tow bar, and swim platform.',
-    condition: 'Excellent',
-    engine: 'MercruiserTM 4.3L MPI',
-    hours: 87,
-    status: 'available',
-    datePosted: '2025-12-01',
-    savedBy: ['u1'],
-    imageEmoji: '🚤',
-  },
-  {
-    id: 'l2',
-    sellerId: 'u2',
-    sellerName: 'Bob Martinez',
-    title: '2015 Boston Whaler 230 Outrage',
-    type: 'Center Console',
-    year: 2015,
-    length: 23,
-    price: 54900,
-    location: 'Panama City, FL',
-    lat: 30.1588,
-    lng: -85.6602,
-    description:
-      'Iconic Boston Whaler 230 Outrage with twin Mercury 115 hp four-stroke outboards. Full electronics package including chart plotter and VHF radio. Rod holders, live well, and anchor system. Great offshore fishing boat.',
-    condition: 'Good',
-    engine: 'Twin Mercury 115 Four-Stroke',
-    hours: 412,
-    status: 'available',
-    datePosted: '2025-11-15',
-    savedBy: ['u1', 'u3'],
-    imageEmoji: '⛵',
-  },
-  {
-    id: 'l3',
-    sellerId: 'u4',
-    sellerName: 'Dave Thompson',
-    title: '2020 Pontoon SunTracker Party Barge 22',
-    type: 'Pontoon',
-    year: 2020,
-    length: 22,
-    price: 35000,
-    location: 'Gainesville, FL',
-    lat: 29.6516,
-    lng: -82.3248,
-    description:
-      'Perfect family pontoon boat. Mercury 115hp four-stroke, Bluetooth stereo, full cover, and bimini top. Used primarily on Santa Fe Lake. Low hours, garage kept. Trailer included.',
-    condition: 'Like New',
-    engine: 'Mercury 115 Four-Stroke',
-    hours: 145,
-    status: 'available',
-    datePosted: '2026-01-10',
-    savedBy: ['u3'],
-    imageEmoji: '🛥️',
-  },
-  {
-    id: 'l4',
-    sellerId: 'u4',
-    sellerName: 'Dave Thompson',
-    title: '2017 Sailfish 320 Express Cruiser',
-    type: 'Express Cruiser',
-    year: 2017,
-    length: 32,
-    price: 89000,
-    location: 'Destin, FL',
-    lat: 30.3935,
-    lng: -86.4958,
-    description:
-      'Impressive Sailfish 320 Express Cruiser. Twin 300hp Mercury Verado outboards. Full canvas, bow thruster, extended swim platform, and large cockpit. Excellent for offshore cruising and fishing. EPIRB, life raft, and full safety equipment included.',
-    condition: 'Excellent',
-    engine: 'Twin Mercury Verado 300',
-    hours: 310,
-    status: 'available',
-    datePosted: '2025-10-20',
-    savedBy: [],
-    imageEmoji: '🚢',
-  },
-  {
-    id: 'l5',
-    sellerId: 'u2',
-    sellerName: 'Bob Martinez',
-    title: '2012 Malibu Wakesetter 21 VLX',
-    type: 'Wake Boat',
-    year: 2012,
-    length: 21,
-    price: 42000,
-    location: 'Orlando, FL',
-    lat: 28.5383,
-    lng: -81.3792,
-    description:
-      'The ultimate wakeboarding and wakesurfing boat. Indmar Monsoon 350hp engine. Surf Gate technology, ballast system, and tower with board racks. Traxxas tower speakers and subwoofer. Garage kept, meticulously maintained.',
-    condition: 'Good',
-    engine: 'Indmar Monsoon 350hp',
-    hours: 650,
-    status: 'available',
-    datePosted: '2026-02-05',
-    savedBy: ['u1', 'u3'],
-    imageEmoji: '🏄',
-  },
-  {
-    id: 'l6',
-    sellerId: 'u4',
-    sellerName: 'Dave Thompson',
-    title: '2018 Grady-White Canyon 271',
-    type: 'Center Console',
-    year: 2018,
-    length: 27,
-    price: 79500,
-    location: 'Fort Lauderdale, FL',
-    lat: 26.1224,
-    lng: -80.1373,
-    description:
-      'Top-of-the-line Grady-White with twin Yamaha 150 four-strokes. Full Garmin electronics suite, trolling motor, live wells, and rigging station. World-class build quality with legendary unsinkable hull. Ready to fish.',
-    condition: 'Excellent',
-    engine: 'Twin Yamaha 150 Four-Stroke',
-    hours: 205,
-    status: 'sold',
-    datePosted: '2025-09-01',
-    savedBy: [],
-    imageEmoji: '🎣',
-  },
-  {
-    id: 'l7',
-    sellerId: 'u2',
-    sellerName: 'Bob Martinez',
-    title: '2016 Hobie Mirage Pro Angler 14',
-    type: 'Kayak',
-    year: 2016,
-    length: 14,
-    price: 3200,
-    location: 'Tallahassee, FL',
-    lat: 30.4383,
-    lng: -84.2807,
-    description:
-      'Ultimate fishing kayak with Mirage Drive pedal system. VANTAGE seat, transducer scupper, retractable skeg, and bow storage. H-crate with tackle management system included. Very stable hull, great for lakes and inshore.',
-    condition: 'Good',
-    engine: 'Pedal Drive',
+  if (!res.ok) {
+    throw new Error(`HTTP ${res.status}`);
+  }
+
+  const contentType = res.headers.get('content-type') || '';
+  if (contentType.includes('application/json')) {
+    return res.json();
+  }
+  return null;
+}
+
+function parsePrice(value) {
+  if (typeof value === 'number') return value;
+  const numeric = String(value ?? '').replace(/[^\d.-]/g, '');
+  const parsed = parseFloat(numeric);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function normalizeDate(value) {
+  const raw = String(value || '').trim();
+  if (!raw) return new Date().toISOString().split('T')[0];
+  if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) return raw;
+  const parsed = new Date(raw);
+  if (!Number.isNaN(parsed.getTime())) {
+    return parsed.toISOString().split('T')[0];
+  }
+  return new Date().toISOString().split('T')[0];
+}
+
+function mapListingFromApi(raw) {
+  const id = String(raw?.listing_id ?? '');
+  const sellerUsername = raw?.seller_username || '';
+  const seller = usersByUsername.get(sellerUsername);
+  return {
+    id,
+    title: raw?.name || 'Untitled Listing',
+    description: raw?.description || '',
+    location: raw?.location || '',
+    price: parsePrice(raw?.price),
+    datePosted: raw?.date_listed || '',
+    status: raw?.is_sold ? 'sold' : 'available',
+    sellerId: sellerUsername,
+    sellerName: seller?.name || sellerUsername || 'Unknown Seller',
+    type: 'Boat',
+    year: 'N/A',
+    length: 'N/A',
+    condition: 'N/A',
+    engine: '',
     hours: null,
-    status: 'available',
-    datePosted: '2026-01-28',
-    savedBy: ['u3'],
-    imageEmoji: '🚣',
-  },
-  {
-    id: 'l8',
-    sellerId: 'u4',
-    sellerName: 'Dave Thompson',
-    title: '2022 NauticStar 2102 Legacy',
-    type: 'Bay Boat',
-    year: 2022,
-    length: 21,
-    price: 58000,
-    location: 'Pensacola, FL',
-    lat: 30.4213,
-    lng: -87.2169,
-    description:
-      'Brand new 2022 NauticStar 2102 Legacy bay boat. Mercury 150 ProXS four-stroke with 12 hours only. Shallow draft hull perfect for inshore fishing. Factory warranty still valid. Includes custom trailer.',
-    condition: 'Like New',
-    engine: 'Mercury 150 ProXS',
-    hours: 12,
-    status: 'available',
-    datePosted: '2026-03-01',
-    savedBy: ['u1'],
-    imageEmoji: '⚓',
-  },
-];
+    imageEmoji: '🚤',
+  };
+}
 
-// ── Initialization ────────────────────────────────────────────────────────────
-/**
- * Seed localStorage with sample data if it hasn't been seeded yet.
- */
-function initData() {
-  if (!localStorage.getItem(KEYS.USERS)) {
-    localStorage.setItem(KEYS.USERS, JSON.stringify(SAMPLE_USERS));
+async function loadListings() {
+  const all = [];
+  let page = 0;
+
+  while (true) {
+    const batch = await apiJson(`/api/get_browse_page/${page}`);
+    if (!Array.isArray(batch)) break;
+    if (batch.length === 0) break;
+    all.push(...batch);
+    if (batch.length < BROWSE_PAGE_SIZE) break;
+    page += 1;
   }
-  if (!localStorage.getItem(KEYS.LISTINGS)) {
-    localStorage.setItem(KEYS.LISTINGS, JSON.stringify(SAMPLE_LISTINGS));
+
+  // Seed minimal seller stubs from raw listing data so that sellers who exist in
+  // the database but have never registered via the web UI can still log in.
+  // Their name and email will be populated if/when they register through the UI.
+  for (const raw of all) {
+    const sellerKey = (raw.seller_username || '').trim();
+    if (sellerKey && !usersByUsername.has(sellerKey)) {
+      const stub = {
+        id: sellerKey,
+        username: sellerKey,
+        role: 'seller',
+        name: sellerKey,
+        email: '',
+        location: '',
+      };
+      usersCache.push(stub);
+      usersByUsername.set(sellerKey, stub);
+    }
   }
-  normalizeStoredUsers();
-  normalizeStoredListings();
-  return loadCities();
+
+  listingsCache = all.map(mapListingFromApi);
+  return listingsCache;
 }
 
-// ── Listings ──────────────────────────────────────────────────────────────────
-function getListings() {
-  return JSON.parse(localStorage.getItem(KEYS.LISTINGS)) || [];
+function getSavedStore() {
+  try {
+    return JSON.parse(localStorage.getItem(KEYS.SAVED_LISTINGS)) || {};
+  } catch {
+    return {};
+  }
 }
 
-function getListingById(id) {
-  return getListings().find(l => l.id === id) || null;
+function setSavedStore(store) {
+  localStorage.setItem(KEYS.SAVED_LISTINGS, JSON.stringify(store));
 }
 
-function saveListings(listings) {
-  localStorage.setItem(KEYS.LISTINGS, JSON.stringify(listings));
+function getUsersStore() {
+  try {
+    return JSON.parse(localStorage.getItem(KEYS.USERS)) || [];
+  } catch {
+    return [];
+  }
 }
 
-function addListing(listing) {
-  const listings = getListings();
-  listing.id = 'l' + Date.now();
-  listing.datePosted = new Date().toISOString().split('T')[0];
-  listing.savedBy = [];
-  listing.status = 'available';
-  listings.push(listing);
-  saveListings(listings);
-  return listing;
-}
-
-function updateListing(id, updates) {
-  const listings = getListings();
-  const idx = listings.findIndex(l => l.id === id);
-  if (idx === -1) return null;
-  listings[idx] = { ...listings[idx], ...updates };
-  saveListings(listings);
-  return listings[idx];
-}
-
-function deleteListing(id) {
-  const listings = getListings().filter(l => l.id !== id);
-  saveListings(listings);
-}
-
-function getListingsBySeller(sellerId) {
-  return getListings().filter(l => l.sellerId === sellerId);
-}
-
-// ── Users ─────────────────────────────────────────────────────────────────────
-function getUsers() {
-  return JSON.parse(localStorage.getItem(KEYS.USERS)) || [];
-}
-
-function saveUsers(users) {
+function setUsersStore(users) {
   localStorage.setItem(KEYS.USERS, JSON.stringify(users));
 }
 
+function ensureSavedListingIdsLoaded(userId) {
+  if (!userId) return Promise.resolve([]);
+  const store = getSavedStore();
+  const key = String(userId);
+  if (!Array.isArray(store[key])) {
+    store[key] = [];
+    setSavedStore(store);
+  }
+  return Promise.resolve(store[key]);
+}
+
+async function initData() {
+  if (_initPromise) return _initPromise;
+  _initPromise = (async () => {
+    usersCache = getUsersStore();
+    rebuildUserLookup();
+    await loadCities();
+    await loadListings();
+    // Persist seeded seller stubs back to local storage.
+    setUsersStore(usersCache);
+  })().catch(err => {
+    console.error('Failed to initialize app data:', err);
+  });
+  return _initPromise;
+}
+
+function getListings() {
+  return listingsCache.slice();
+}
+
+function getListingById(id) {
+  const key = String(id);
+  return listingsCache.find(l => l.id === key) || null;
+}
+
+function saveListings(listings) {
+  listingsCache = Array.isArray(listings) ? listings.slice() : [];
+}
+
+async function addListing(listing) {
+  const existingIds = new Set(listingsCache.map(l => l.id));
+  const payload = {
+    listing_id: 0,
+    name: listing?.title || 'Untitled Listing',
+    description: listing?.description || '',
+    location: listing?.location || '',
+    price: Number(listing?.price || 0),
+    date_listed: new Date().toISOString().split('T')[0],
+    is_sold: false,
+    seller_username: listing?.sellerId || '',
+  };
+
+  await apiJson('/api/add_or_update_listing', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+
+  await loadListings();
+  const created = listingsCache.find(l => !existingIds.has(l.id));
+  return created || null;
+}
+
+async function updateListing(id, updates) {
+  const current = getListingById(id);
+  if (!current) return null;
+
+  const next = { ...current, ...updates };
+  const payload = {
+    listing_id: Number(next.id),
+    name: next.title || 'Untitled Listing',
+    description: next.description || '',
+    location: next.location || '',
+    price: Number(next.price || 0),
+    date_listed: normalizeDate(next.datePosted),
+    is_sold: (next.status || 'available') === 'sold',
+    seller_username: next.sellerId || '',
+  };
+
+  await apiJson('/api/add_or_update_listing', {
+    method: 'PUT',
+    body: JSON.stringify(payload),
+  });
+
+  await loadListings();
+  return getListingById(id);
+}
+
+async function deleteListing(id) {
+  try {
+    await apiJson(`/api/delete_listing/${Number(id)}`, { method: 'DELETE' });
+    listingsCache = listingsCache.filter(l => l.id !== String(id));
+  } catch (err) {
+    throw err;
+  }
+}
+
+function getListingsBySeller(sellerId) {
+  const key = String(sellerId || '').toLowerCase();
+  return listingsCache.filter(l => (l.sellerId || '').toLowerCase() === key);
+}
+
+function getUsers() {
+  return usersCache.slice();
+}
+
+function saveUsers(users) {
+  usersCache = Array.isArray(users) ? users.slice() : [];
+  rebuildUserLookup();
+  setUsersStore(usersCache);
+}
+
 function updateUser(id, updates) {
-  const users = getUsers();
-  const idx = users.findIndex(u => u.id === id);
+  const key = String(id || '');
+  const idx = usersCache.findIndex(u => String(u.id) === key);
   if (idx === -1) return null;
-  users[idx] = { ...users[idx], ...updates };
-  saveUsers(users);
-  return users[idx];
+
+  const updated = { ...usersCache[idx], ...updates };
+  usersCache[idx] = updated;
+  rebuildUserLookup();
+  setUsersStore(usersCache);
+
+  const endpoint = updated.role === 'buyer' ? '/api/add_or_update_buyer' : '/api/add_or_update_seller';
+  const payload = updated.role === 'buyer'
+    ? {
+        username: updated.username,
+        name: updated.name,
+        location: updated.location || '',
+      }
+    : {
+        username: updated.username,
+        name: updated.name,
+        email: updated.email || '',
+      };
+
+  // Intentionally fire-and-forget: UI updates immediately, and backend sync follows.
+  apiJson(endpoint, {
+    method: 'PUT',
+    body: JSON.stringify(payload),
+  }).catch(err => {
+    console.error('Failed to update user:', err);
+  });
+
+  return updated;
 }
 
 function getUserById(id) {
-  return getUsers().find(u => u.id === id) || null;
+  const key = String(id || '');
+  return usersCache.find(u => String(u.id) === key) || null;
 }
 
 function getUserByUsername(username) {
-  return getUsers().find(u => u.username === username) || null;
+  const key = String(username || '').trim().toLowerCase();
+  return usersCache.find(u => String(u.username || '').toLowerCase() === key) || null;
 }
 
-function registerUser(user) {
-  const users = getUsers();
-  if (users.find(u => u.username === user.username)) {
+async function registerUser(user) {
+  if (getUserByUsername(user.username)) {
     return { error: 'Username already taken.' };
   }
-  user.id = 'u' + Date.now();
-  users.push(user);
-  saveUsers(users);
-  return user;
-}
 
-// ── Saved Listings (Buyer Feature) ────────────────────────────────────────────
-function getSavedListingIds(userId) {
-  const listings = getListings();
-  return listings.filter(l => l.savedBy && l.savedBy.includes(userId)).map(l => l.id);
-}
+  const created = {
+    id: user.username,
+    username: user.username,
+    role: user.role,
+    name: user.name,
+    email: user.email || '',
+    location: user.location || '',
+  };
 
-function saveListing(userId, listingId) {
-  const listings = getListings();
-  const listing = listings.find(l => l.id === listingId);
-  if (!listing) return;
-  if (!listing.savedBy.includes(userId)) {
-    listing.savedBy.push(userId);
-    saveListings(listings);
+  usersCache.push(created);
+  rebuildUserLookup();
+  setUsersStore(usersCache);
+
+  const endpoint = created.role === 'buyer' ? '/api/add_or_update_buyer' : '/api/add_or_update_seller';
+  const payload = created.role === 'buyer'
+    ? {
+        username: created.username,
+        name: created.name,
+        location: created.location,
+      }
+    : {
+        username: created.username,
+        name: created.name,
+        email: created.email,
+      };
+
+  try {
+    await apiJson(endpoint, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  } catch (err) {
+    console.error('Backend registration failed:', err);
   }
+
+  return created;
 }
 
-function unsaveListing(userId, listingId) {
-  const listings = getListings();
-  const listing = listings.find(l => l.id === listingId);
-  if (!listing) return;
-  listing.savedBy = listing.savedBy.filter(id => id !== userId);
-  saveListings(listings);
+function getSavedListingIds(userId) {
+  const store = getSavedStore();
+  return store[String(userId || '')] || [];
+}
+
+function getSaveCountByListingId(listingId) {
+  const key = String(listingId || '');
+  if (!key) return 0;
+  const store = getSavedStore();
+  return Object.values(store).reduce((count, ids) => {
+    return count + (Array.isArray(ids) && ids.includes(key) ? 1 : 0);
+  }, 0);
+}
+
+async function saveListing(userId, listingId) {
+  const userKey = String(userId || '');
+  const listingKey = String(listingId || '');
+  if (!userKey || !listingKey) return;
+
+  const store = getSavedStore();
+  const ids = new Set(store[userKey] || []);
+  ids.add(listingKey);
+  store[userKey] = Array.from(ids);
+  setSavedStore(store);
+}
+
+async function unsaveListing(userId, listingId) {
+  const userKey = String(userId || '');
+  const listingKey = String(listingId || '');
+  const store = getSavedStore();
+  const ids = new Set(store[userKey] || []);
+  ids.delete(listingKey);
+  store[userKey] = Array.from(ids);
+  setSavedStore(store);
 }
 
 function isListingSaved(userId, listingId) {
-  const listing = getListingById(listingId);
-  return listing ? listing.savedBy.includes(userId) : false;
+  return getSavedListingIds(userId).includes(String(listingId || ''));
 }
 
 function getSavedListings(userId) {
-  return getListings().filter(l => l.savedBy && l.savedBy.includes(userId));
+  const idSet = new Set(getSavedListingIds(userId));
+  return listingsCache.filter(l => idSet.has(String(l.id)));
 }
 
-// ── Utility Helpers ───────────────────────────────────────────────────────────
-/**
- * Calculate distance between two lat/lng points using the Haversine formula.
- * Returns distance in miles.
- */
 function haversineDistance(lat1, lng1, lat2, lng2) {
-  const R = 3958.8; // Earth radius in miles
+  const R = 3958.8;
   const dLat = toRad(lat2 - lat1);
   const dLng = toRad(lng2 - lng1);
   const a =
@@ -397,60 +422,21 @@ function toRad(deg) {
   return (deg * Math.PI) / 180;
 }
 
-/**
- * Format a price number as USD currency string.
- */
 function formatPrice(price) {
-  return '$' + Number(price).toLocaleString('en-US');
+  return '$' + Number(price || 0).toLocaleString('en-US');
 }
 
-/**
- * Format a date string (YYYY-MM-DD) to a human-readable form.
- */
 function formatDate(dateStr) {
   if (!dateStr) return 'N/A';
+  const isoMatch = /^\d{4}-\d{2}-\d{2}$/.test(dateStr);
+  if (!isoMatch) return String(dateStr);
   const d = new Date(dateStr + 'T00:00:00');
+  if (Number.isNaN(d.getTime())) return String(dateStr);
   return d.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
 }
 
-/**
- * Get the number of saves (popularity) for a listing.
- */
 function getSaveCount(listing) {
-  return listing.savedBy ? listing.savedBy.length : 0;
-}
-
-function normalizeStoredUsers() {
-  const users = getUsers();
-  let changed = false;
-  const normalized = users.map(u => {
-    if (u.role !== 'buyer') return u;
-    const location = (u.location || u.city || '').trim();
-    if (u.location !== location || Object.hasOwn(u, 'city')) {
-      changed = true;
-      const copy = { ...u, location };
-      delete copy.city;
-      return copy;
-    }
-    return u;
-  });
-  if (changed) saveUsers(normalized);
-}
-
-function normalizeStoredListings() {
-  const listings = getListings();
-  let changed = false;
-  const normalized = listings.map(l => {
-    const location = (l.location || l.city || '').trim();
-    if (l.location !== location || Object.hasOwn(l, 'city')) {
-      changed = true;
-      const copy = { ...l, location };
-      delete copy.city;
-      return copy;
-    }
-    return l;
-  });
-  if (changed) saveListings(normalized);
+  return getSaveCountByListingId(listing?.id);
 }
 
 function getGeoCache() {
@@ -468,8 +454,6 @@ function saveGeoCache(cache) {
 }
 
 let geocodeQueue = Promise.resolve();
-// Open-Meteo free geocoding usage is generous, but we still throttle and cache
-// to avoid bursty client behavior and reduce unnecessary requests.
 const GEOCODE_THROTTLE_INTERVAL_MS = 1000;
 let lastGeocodeAt = 0;
 
@@ -529,14 +513,12 @@ async function geocodeLocation(location) {
   return result;
 }
 
-// ── Exports (global) ──────────────────────────────────────────────────────────
-// All functions and constants are made available on the window object so any
-// page script can call them without a module bundler.
 window.FYB = window.FYB || {};
 Object.assign(window.FYB, {
   KEYS,
   BUYER_LOCATIONS,
   initData,
+  ensureSavedListingIdsLoaded,
   getListings,
   getListingById,
   saveListings,
