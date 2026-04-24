@@ -94,6 +94,7 @@ function mapListingFromApi(raw) {
     status: raw?.is_sold ? 'sold' : 'available',
     sellerId: sellerUsername,
     sellerName: seller?.name || sellerUsername || 'Unknown Seller',
+    sellerUsername: seller?.seller_username || "UnknownSeller",
     type: 'Boat',
     year: 'N/A',
     length: 'N/A',
@@ -309,14 +310,20 @@ function updateUser(id, updates) {
   return updated;
 }
 
-function getUserById(id) {
-  const key = String(id || '');
-  return usersCache.find(u => String(u.id) === key) || null;
-}
-
-function getUserByUsername(username) {
-  const key = String(username || '').trim().toLowerCase();
-  return usersCache.find(u => String(u.username || '').toLowerCase() === key) || null;
+async function getUserByUsername(username) {
+  const key = String(username || '').trim();
+  try {
+    let response = await fetch(`/api/get_user/${username}`);
+    let data = await response.json();
+    console.log(data);
+    if ('error' in data) {
+      return null;
+    }
+    return data;
+  }
+  catch {
+    return null;
+  }
 }
 
 async function registerUser(user) {
@@ -529,7 +536,6 @@ Object.assign(window.FYB, {
   getUsers,
   saveUsers,
   updateUser,
-  getUserById,
   getUserByUsername,
   registerUser,
   getSavedListingIds,
