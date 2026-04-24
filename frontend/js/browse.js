@@ -15,12 +15,24 @@
   document.addEventListener('DOMContentLoaded', async () => {
     await FYB.initData();
     const currentUser = FYBAuth.getCurrentUser();
+
+    if (currentUser?.role === 'buyer' && (!currentUser.location || currentUser.location.trim() === '')) {
+    const stateSelect = document.getElementById('buyer-state');
+    const citySelect = document.getElementById('buyer-city');
+
+    if (stateSelect?.value && citySelect?.value) {
+      currentUser.location = `${citySelect.value}, ${stateSelect.value}`;
+      FYBAuth.setCurrentUser(currentUser);
+    }
+  }
+
     if (currentUser?.role === 'buyer') {
       await FYB.ensureSavedListingIdsLoaded(currentUser.id);
     }
     FYBAuth.renderNav();
     allListings = FYB.getListings().filter(l => l.status === 'available');
     setupBuyerLocationSelectors();
+    renderBuyerLocationLabel();
     applyFilters();
     setupProximitySort();
   });
@@ -41,6 +53,9 @@
     }
 
     const existing = findLocationByText(user.location || '');
+    console.log("Buyer saved location:", user.location);
+    console.log("Parsed existing buyer:", existing);
+
     if (existing) {
       stateSelect.value = existing.stateCode;
       renderCityOptions(citySelect, existing.stateCode, existing.cityName);
@@ -166,19 +181,45 @@
   function findCity(stateCode, cityName) {
     const state = FYB.BUYER_LOCATIONS[stateCode];
     if (!state) return null;
-    return state.cities.find(c => c.name === cityName) || null;
-  }
+
+    const target = (cityName || '').trim().toLowerCase();
+
+    return state.cities.find(c =>
+      c.name.trim().toLowerCase() === target
+    ) || null;
+}
 
   function findLocationByText(locationText) {
-    const clean = (locationText || '').trim();
-    if (!clean) return null;
-    const [cityRaw, stateRaw = ''] = clean.split(',').map(part => part.trim());
-    const stateCode = normalizeStateCode(stateRaw);
-    if (!stateCode) return null;
-    const city = findCity(stateCode, cityRaw);
-    if (!city) return null;
-    return { stateCode, cityName: city.name, lat: city.lat, lng: city.lng };
+  const clean = (locationText || '').trim();
+  if (!clean) return null;
+
+  const parts = clean.split(',').map(p => p.trim());
+
+  let cityRaw = '';
+  let stateRaw = '';
+
+  if (parts.length >= 2) {
+    cityRaw = parts[0];
+    stateRaw = parts[1];
+  } else {
+    const words = clean.split(/\s+/);
+    stateRaw = words.pop();
+    cityRaw = words.join(' ');
   }
+
+  const stateCode = normalizeStateCode(stateRaw);
+  if (!stateCode) return null;
+
+  const city = findCity(stateCode, cityRaw);
+  if (!city) return null;
+
+  return {
+    stateCode,
+    cityName: city.name,
+    lat: city.lat,
+    lng: city.lng
+  };
+}
 
   function normalizeStateCode(stateText) {
     const normalized = (stateText || '').trim().toLowerCase();
@@ -232,15 +273,25 @@
       case 'popularity':
         results.sort((a, b) => FYB.getSaveCount(b) - FYB.getSaveCount(a));
         break;
-      case 'proximity':
+     case 'proximity':
         if (userLat !== null) {
           results.sort((a, b) => {
-            const dA = Number.isFinite(a.lat) && Number.isFinite(a.lng)
-              ? FYB.haversineDistance(userLat, userLng, a.lat, a.lng)
+            const coordsA = findLocationByText(a.location || '');
+            const coordsB = findLocationByText(b.location || '');
+
+            const latA = coordsA?.lat;
+            const lngA = coordsA?.lng;
+            const latB = coordsB?.lat;
+            const lngB = coordsB?.lng;
+
+            const dA = Number.isFinite(latA) && Number.isFinite(lngA)
+              ? FYB.haversineDistance(userLat, userLng, latA, lngA)
               : Infinity;
-            const dB = Number.isFinite(b.lat) && Number.isFinite(b.lng)
-              ? FYB.haversineDistance(userLat, userLng, b.lat, b.lng)
+
+            const dB = Number.isFinite(latB) && Number.isFinite(lngB)
+              ? FYB.haversineDistance(userLat, userLng, latB, lngB)
               : Infinity;
+
             return dA - dB;
           });
         }
@@ -251,6 +302,20 @@
     checkPopularityAlerts(results);
     updateResultCount(results.length);
   }
+
+  function renderBuyerLocationLabel() {
+    const el = document.getElementById('current-buyer-location');
+    if (!el) return;
+
+    const user = FYBAuth.getCurrentUser();
+
+    if (!user || user.role !== 'buyer' || !user.location) {
+      el.textContent = '';
+      return;
+    }
+
+    el.innerHTML = `📍 Using location: ${FYBAuth.escapeHtml(user.location)}`;
+}
 
   // ── Popularity Alerts ──────────────────────────────────────────────────────
   function checkPopularityAlerts(results) {
@@ -275,6 +340,7 @@
 
   // ── Rendering ──────────────────────────────────────────────────────────────
   function renderListings(listings) {
+    
     const container = document.getElementById('listings-container');
     if (!container) return;
 
@@ -294,10 +360,24 @@
       const isSaved = user && FYB.isListingSaved(user.id, l.id);
       const saveCount = FYB.getSaveCount(l);
       const isPopular = saveCount >= 2;
-      const hasLocation = user && userLat !== null && Number.isFinite(l.lat) && Number.isFinite(l.lng);
+      const listingCoords = findLocationByText(l.location || '');
+      const lat = listingCoords?.lat;
+      const lng = listingCoords?.lng;
+
+      const hasLocation =
+        user &&
+        userLat !== null &&
+        Number.isFinite(lat) &&
+        Number.isFinite(lng);
+
       const dist = hasLocation
-        ? Math.round(FYB.haversineDistance(userLat, userLng, l.lat, l.lng))
+        ? Math.round(FYB.haversineDistance(userLat, userLng, lat, lng))
         : null;
+
+      console.log("Listing location:", l.location);
+      console.log("Parsed:", findLocationByText(l.location));
+      console.log("Buyer coords:", userLat, userLng);
+      console.log("Current user:", user);     
 
       return `
         <div class="card">
@@ -311,7 +391,7 @@
             </div>
             <div class="card-title">${FYBAuth.escapeHtml(l.title)}</div>
             <div class="card-text">${FYBAuth.escapeHtml(l.location)}${dist !== null ? ` &nbsp;·&nbsp; ~${dist} mi away` : ''}</div>
-            <div class="card-text">${FYBAuth.escapeHtml(l.type)} · ${l.year} · ${l.length} ft</div>
+            <div class="card-text">${FYBAuth.escapeHtml(l.type)}</div>
             <div class="card-price">${FYB.formatPrice(l.price)}</div>
             <div class="stats-row">
               <span class="stat-item"><span class="stat-icon">🔖</span> ${saveCount} saved</span>
