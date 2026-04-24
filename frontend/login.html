@@ -36,7 +36,7 @@
         </div>
         <button type="submit" class="btn btn-primary btn-block btn-lg">Log In</button>
         <p class="text-center mt-2" style="font-size:0.85rem; color: var(--mid-gray);">
-          Demo usernames: <code>alice_buyer</code> &nbsp;|&nbsp; <code>bob_seller</code>
+          No password required — existing seller: <code>AdamCelery</code> &nbsp;|&nbsp; New? Register below
         </p>
       </form>
 
@@ -218,7 +218,7 @@
         }
       }
 
-      const result = FYBAuth.register(username, name, email, role, location);
+      const result = await FYBAuth.register(username, name, email, role, location);
       if (result.error) {
         showAlert(result.error);
       } else {
