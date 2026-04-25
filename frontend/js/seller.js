@@ -141,7 +141,7 @@
     }
 
     const data = {
-      sellerId: user.id,
+      sellerId: user.username,
       sellerName: user.name,
       title: document.getElementById('form-title').value.trim(),
       price: parseFloat(document.getElementById('form-price').value),
