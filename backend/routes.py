@@ -111,19 +111,19 @@ def delete_buyer(buyer_username: str):
 def get_user(username: str):
     db = get_db()
 
-    user_result = db.execute(
-        """
-        SELECT *, 'buyer' as role FROM Buyers WHERE username = ?
-        UNION
-        SELECT *, 'seller' as role FROM Sellers WHERE username = ?
-        """,
-        [username, username]
-    ).fetchone()
+    buyer_result = db.execute('SELECT * FROM Buyers WHERE username = ?', [username]).fetchone()
+    if buyer_result is not None:
+        user = dict(buyer_result)
+        user['role'] = 'buyer'
+        return user
 
-    if user_result is None:
-        return {'error': 'User not found'}, 404
+    seller_result = db.execute('SELECT * FROM Sellers WHERE username = ?', [username]).fetchone()
+    if seller_result is not None:
+        user = dict(seller_result)
+        user['role'] = 'seller'
+        return user
 
-    return dict(user_result)
+    return {'error': 'User not found'}, 404
 
 
 # Add or update seller
