@@ -84,9 +84,16 @@ def add_or_update_buyer():
 
     db = get_db()
 
-    db.execute('INSERT OR REPLACE INTO Buyers (username, name, location) VALUES (?, ?, ?)',
-        [buyer['username'], buyer['name'], buyer['location']]
-    )
+    row_exists = db.execute('SELECT 1 FROM Buyers WHERE username = ?', [buyer['username']]).fetchone() is not None
+
+    if row_exists: 
+        db.execute('UPDATE Buyers SET name = ?, location = ? WHERE username = ?',
+            [buyer['name'], buyer['location'], buyer['username']]
+        )
+    else:
+        db.execute('INSERT INTO Buyers (username, name, location) VALUES (?, ?, ?)',
+            [buyer['username'], buyer['name'], buyer['location']]
+        )
     
     db.commit()
 
@@ -133,11 +140,26 @@ def add_or_update_seller():
 
     db = get_db()
 
-    db.execute('INSERT OR REPLACE INTO Sellers (username, name, email) VALUES (?, ?, ?)',
-        [seller['username'], seller['name'], seller['email']]
-    )
-    
-    db.commit()
+    row_exists = db.execute('SELECT 1 FROM Sellers WHERE username = ?', [seller['username']]).fetchone() is not None
+
+    try:
+        if row_exists: 
+            result = db.execute('UPDATE Sellers SET name = ?, email = ? WHERE username = ?',
+                [seller['name'], seller['email'], seller['username']]
+            )
+            if result.rowcount != 1:
+                return {'error': 'Failed to update seller'}, 500
+        else:
+            result = db.execute('INSERT INTO Sellers (username, name, email) VALUES (?, ?, ?)',
+                [seller['username'], seller['name'], seller['email']]
+            )
+            if result.rowcount != 1:
+                return {'error': 'Failed to update seller'}, 500
+        
+        db.commit()
+
+    except sqlite3.IntegrityError as e:
+        return {'error': str(e)}, 500
 
     return {'success': True}
 
