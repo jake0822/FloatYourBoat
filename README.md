@@ -6,4 +6,3 @@ Project for FSU's Database Class Spring 2026
 1. Install [python](https://www.python.org/downloads/)
 2. Run `pip install -r requirements.txt`
 3. Run `python backend/app.py` to start the backend server
-4. Eventually you will also need to start the database server
