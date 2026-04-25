@@ -32,7 +32,6 @@
   function renderListing(listing) {
     const container = document.getElementById('listing-container');
     if (!container) return;
-
     const user = FYBAuth.getCurrentUser();
     const isSaved = user && FYB.isListingSaved(user.username, listing.id);
     const saveCount = FYB.getSaveCount(listing);
@@ -136,7 +135,7 @@
   window.handleContact = async function (listingId) {
     const listing = await FYB.getListingById(listingId);
     if (!listing) return;
-    const seller = await FYB.getUserByUsername(listing.sellerUsername);
+    const seller = await FYB.getUserByUsername(listing.sellerId);
     if (!seller) {
       showNotification('Unable to find seller information for this listing.', 'danger');
       return;

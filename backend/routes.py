@@ -180,7 +180,17 @@ def get_seller_listings(seller_username: str):
 @app.route('/api/get_listing/<int:listing_id>', methods=['GET'])
 def get_listing(listing_id: int):
     db = get_db()
-    listing = db.execute("SELECT * FROM Listings WHERE listing_id = ?", [listing_id]).fetchone()
+    listing = db.execute(
+        """
+        SELECT Listings.*, COUNT(Saved_Listings.listing_id) as save_count
+        FROM Listings
+        LEFT JOIN Saved_Listings ON Listings.listing_id = Saved_Listings.listing_id
+        WHERE Listings.listing_id = ?
+        GROUP BY Listings.listing_id
+        ORDER BY Listings.listing_id DESC
+        """,
+        [listing_id]
+    ).fetchone()
 
     if listing is None:
         return jsonify({'error': 'Listing not found'})
@@ -238,7 +248,15 @@ def get_browse_page(page_number: int):
     db = get_db()
     offset = page_number * 10
     listings = db.execute(
-        'SELECT * FROM listings ORDER BY listing_id DESC LIMIT 10 OFFSET ?',
+        """
+        SELECT Listings.*, COUNT(Saved_Listings.listing_id) as save_count
+        FROM Listings
+        LEFT JOIN Saved_Listings ON Listings.listing_id = Saved_Listings.listing_id
+        GROUP BY Listings.listing_id
+        ORDER BY Listings.listing_id DESC
+        LIMIT 10
+        OFFSET ?
+        """,
         [offset]
     ).fetchall()
     return jsonify([dict(listing) for listing in listings])

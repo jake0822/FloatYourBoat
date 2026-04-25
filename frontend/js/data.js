@@ -102,6 +102,7 @@ function mapListingFromApi(raw) {
     engine: '',
     hours: null,
     imageEmoji: '🚤',
+    saveCount: raw?.save_count || 0
   };
 }
 
@@ -337,9 +338,9 @@ function updateUser(id, updates) {
 }
 
 async function getUserByUsername(username) {
-  const key = String(username || '').trim();
+  const usernameTrimmed = String(username || '').trim();
   try {
-    let response = await fetch(`/api/get_user/${username}`);
+    let response = await fetch(`/api/get_user/${usernameTrimmed}`);
     let data = await response.json();
     if ('error' in data) {
       return null;
@@ -352,7 +353,6 @@ async function getUserByUsername(username) {
 }
 
 async function registerUser(user) {
-  console.log(user.username);
   if (await getUserByUsername(user.username)) {
     return { error: 'Username already taken.' };
   }
@@ -505,7 +505,7 @@ function formatDate(dateStr) {
 }
 
 function getSaveCount(listing) {
-  return getSaveCountByListingId(listing?.id);
+  return listing.saveCount;
 }
 
 function getGeoCache() {
