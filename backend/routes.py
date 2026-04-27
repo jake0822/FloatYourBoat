@@ -110,6 +110,10 @@ def delete_buyer(buyer_username: str):
     if result.rowcount == 0:
         return {'error': 'Buyer not found'}, 404
     
+    # Delete their saved listings
+    db.execute('DELETE FROM Saved_Listings WHERE buyer_username = ?', [buyer_username])
+    db.commit()
+    
     return {'success': True}
 
 
@@ -173,6 +177,9 @@ def delete_seller(seller_username: str):
 
     if result.rowcount == 0:
         return {'error': 'Seller not found'}, 404
+
+    db.execute('DELETE FROM Listings WHERE seller_username = ?', [seller_username])
+    db.commit()
     
     return {'success': True}
 

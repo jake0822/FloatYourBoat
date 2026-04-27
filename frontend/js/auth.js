@@ -78,6 +78,37 @@ async function register(username, name, email, role, location = '') {
   return { user: result };
 }
 
+// ── Delete Account ────────────────────────────────────────────────────────────
+async function deleteAccount() {
+  const user = getCurrentUser();
+  if (!user) return;
+
+  if (!confirm('Are you sure you want to delete your account? This cannot be undone.')) {
+    return;
+  }
+
+  const endpoint = user.role === 'seller'
+    ? `/api/delete_seller/${user.username}`
+    : `/api/delete_buyer/${user.username}`;
+
+  try {
+    const response = await fetch(endpoint, {
+      method: 'DELETE',
+    });
+
+    if (!response.ok) {
+      alert('Failed to delete account');
+      return;
+    }
+
+    logout();
+    window.location.href = '/';
+  } catch (error) {
+    console.error('Error deleting account:', error);
+    alert('Error deleting account');
+  }
+}
+
 // ── Navigation Rendering ───────────────────────────────────────────────────────
 /**
  * Render the shared navbar into any element with id="navbar".
@@ -109,6 +140,7 @@ function renderNav() {
         <span>Hi, ${escapeHtml(user.name.split(' ')[0])}</span>
         <span class="role-badge">${escapeHtml(user.role)}</span>
         <button class="btn btn-outline btn-sm" onclick="FYBAuth.logout()">Logout</button>
+        <button class="btn btn-outline btn-sm" onclick="FYBAuth.deleteAccount()">Delete Account</button>
       </div>
     `;
   } else {
@@ -140,6 +172,7 @@ window.FYBAuth = {
   requireSeller,
   login,
   register,
+  deleteAccount,
   renderNav,
   escapeHtml,
 };
