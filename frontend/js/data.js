@@ -586,6 +586,7 @@ window.FYB = window.FYB || {};
 Object.assign(window.FYB, {
   KEYS,
   BUYER_LOCATIONS,
+  apiJson,
   initData,
   ensureSavedListingIdsLoaded,
   getListings,

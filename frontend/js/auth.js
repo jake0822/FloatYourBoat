@@ -139,6 +139,7 @@ function renderNav() {
       <div class="user-info">
         <span>Hi, ${escapeHtml(user.name.split(' ')[0])}</span>
         <span class="role-badge">${escapeHtml(user.role)}</span>
+        <button class="btn btn-outline btn-sm" onclick="window.location.href='edit-account'">Edit Account</button>
         <button class="btn btn-outline btn-sm" onclick="FYBAuth.logout()">Logout</button>
         <button class="btn btn-outline btn-sm" onclick="FYBAuth.deleteAccount()">Delete Account</button>
       </div>

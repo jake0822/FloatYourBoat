@@ -43,6 +43,13 @@ def view_seller():
 def view_saved():
     return render_template('saved.html')
 
+
+# Edit account page
+@app.route('/edit-account', methods=['GET'])
+def edit_account():
+    return render_template('edit-account.html')
+
+
 # -- CSS and JS file routes --
 
 @app.route('/css/<file_path>', methods=['GET'])
